@@ -29,3 +29,8 @@
 * Tutorials
   * https://towardsdatascience.com/making-your-neural-network-say-i-dont-know-bayesian-nns-using-pyro-and-pytorch-b1c24e6ab8cd
   * https://analyticsindiamag.com/hands-on-guide-to-bayesian-neural-network-in-classification/
+
+* Statistical guarantees:
+	* [Statistical Guarantees for the Robustness of Bayesian Neural Networks](https://arxiv.org/abs/1903.01980)
+		* citing papers: https://scholar.google.com/scholar?cites=12927215106318070846&as_sdt=2005&sciodt=0,5&hl=en
+	* [Uncertainty Quantification with Statistical Guarantees in End-to-End Autonomous Driving Control](https://ieeexplore.ieee.org/abstract/document/9196844?casa_token=yi_N16OwFSAAAAAA:tTle5B_cSIjaF9PbITlfYJJZDh1LeqRllXRjz7LPlrNVV8uQWSqHzT7_xOxEiD4mHJOD_tHGIDyKLA)
