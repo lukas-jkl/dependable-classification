@@ -21,6 +21,8 @@
 
 - Overview: https://www.kdnuggets.com/2017/12/what-bayesian-neural-network.html
 - torchbnn: https://pypi.org/project/torchbnn/
+  - Example: https://github.com/Harry24k/bayesian-neural-network-pytorch/blob/master/demos/Bayesian%20Neural%20Network%20Classification.ipynb
+- Uncertainty in BNN: [What Uncertainties Do We Need in Bayesian Deep Learning for Computer Vision?](https://arxiv.org/abs/1703.04977)
 
 
 
