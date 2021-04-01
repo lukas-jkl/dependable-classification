@@ -18,6 +18,8 @@
 * Efficient Neural Network Robustness Certification with General Activation Functions (2018): https://arxiv.org/pdf/1811.00866.pdf
 * On the Effectiveness of Interval Bound Propagation for Training Verifiably Robust Models (2019): https://arxiv.org/abs/1810.12715
   * (nice) code by Deepmind: https://github.com/deepmind/interval-bound-propagation
+  * PyTorch implementation: https://github.com/huanzhang12/CROWN-IBP#compute-crown-verified-errors
+  * also included in this library: https://github.com/KaidiXu/auto_LiRPA
 
 ### Gaussian Processes (GPs)
 
