@@ -12,9 +12,12 @@
 
 ### Probabilistic safety for general NNs
 
-* Reluplex: https://arxiv.org/pdf/1702.01135.pdf&xid=25657,15700023,15700124,15700149,15700186,15700191,15700201,15700237,15700242.pdf
-* Towards Fast Computation of Certified Robustness for ReLU Networks: http://proceedings.mlr.press/v80/weng18a/weng18a.pdf
-* Efficient Neural Network Robustness Certification with General Activation Functions: https://arxiv.org/pdf/1811.00866.pdf
+* Reluplex (2017): https://arxiv.org/pdf/1702.01135.pdf
+  * slow, exact method
+* Towards Fast Computation of Certified Robustness for ReLU Networks (2018): http://proceedings.mlr.press/v80/weng18a/weng18a.pdf
+* Efficient Neural Network Robustness Certification with General Activation Functions (2018): https://arxiv.org/pdf/1811.00866.pdf
+* On the Effectiveness of Interval Bound Propagation for Training Verifiably Robust Models (2019): https://arxiv.org/abs/1810.12715
+  * (nice) code by Deepmind: https://github.com/deepmind/interval-bound-propagation
 
 ### Gaussian Processes (GPs)
 
