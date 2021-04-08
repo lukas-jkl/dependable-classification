@@ -65,6 +65,39 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (sum_correct / len(train_loader.dataset)), sum_loss / len(train_loader.dataset)
 
 
+def compute_accs(model, data_loader, threshold, ptb):
+    """ Compute accuracy and verified accuracy
+    
+    model: base model
+    data_loader: where to load data from
+    threshold: assign class 0 if probability for class 0 is >= threshold
+    ptb: perturbation norm
+    """
+
+    softmax = nn.Softmax(dim=1)
+
+    acc = 0
+    verified_acc = 0
+
+    for data, target in tqdm(data_loader):
+        model = BoundedModule(model, data)
+        my_input = BoundedTensor(data, ptb)
+        prediction = model(my_input)
+        lb, ub = model.compute_bounds(x=(my_input,), method="backward")
+
+        pred_class = (softmax(prediction).squeeze()[0] < threshold).int()
+        lb_class = (softmax(lb).squeeze()[0] < threshold).int()
+        ub_class = (softmax(ub).squeeze()[0] < threshold).int()
+
+        acc += torch.sum(pred_class == target)
+        verified_acc += torch.sum(pred_class == target and lb_class == target and ub_class == target)
+
+    acc = acc.item() / len(data_loader)
+    verified_acc = verified_acc.item() / len(data_loader)
+
+    return acc, verified_acc
+
+
 def main():
     data_a = pd.read_excel('./data/trainingdata_a.xls')
     train_dataset, test_dataset = prepare_data(data_a)
@@ -105,18 +138,17 @@ def main():
     print("Test Acc: {:.2f}, Test Loss: {:.2f}".format(test_acc, test_loss))
 
     # Evaluate boundaries
-    data, target = next(iter(train_loader))
-    model = BoundedModule(model, data)
-    # Define perturbation
+    threshold = 0.5
     ptb = PerturbationLpNorm(norm=np.inf, eps=0.1)
-    # Make the input a BoundedTensor with perturbation
-    my_input = BoundedTensor(data, ptb)
-    # Regular forward propagation using BoundedTensor works as usual.
-    prediction = model(my_input)
-    # Compute LiRPA bounds
-    lb, ub = model.compute_bounds(x=(my_input,), method="backward")
-    print("lower bound:", lb.data)
-    print("upper bound:", ub.data)
+
+    train_acc, train_verified_acc = compute_accs(model, train_loader, threshold, ptb)
+    print("train_acc:", train_acc)
+    print("train_verified_acc:", train_verified_acc)
+
+    test_acc, test_verified_acc = compute_accs(model, test_loader, threshold, ptb)
+    print("test_acc:", test_acc)
+    print("test_verified_acc:", test_verified_acc)
+
     print("done")
 
 
