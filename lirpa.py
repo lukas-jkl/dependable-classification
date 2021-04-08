@@ -5,10 +5,10 @@ import torch.nn as nn
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
-
+import wandb
 
 # evaluate the model on the given set
-def validate(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> (float, float):
+def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> (float, float):
     sum_loss, sum_correct = 0, 0
     margin = torch.Tensor([]).to(device)
 
@@ -98,58 +98,73 @@ def compute_accs(model, data_loader, threshold, ptb):
     return acc, verified_acc
 
 
+def train_model(model, criterion, device, train_loader):
+    config = wandb.config
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+
+    pbar = tqdm(range(config.epochs))
+    training_accuracy, training_loss = 0, 0
+    for epoch in pbar:
+        pbar.set_description(
+            "(Loss: {:.6f}, Accuracy: {:.4f}) - Progress: ".format(training_loss, training_accuracy))
+        training_accuracy, training_loss = train(model, device, train_loader, criterion, optimizer,
+                                                    epoch)
+        wandb.log({
+            "epoch": epoch,
+            "train_acc": training_accuracy,
+            "train_loss": training_loss
+        })    
+    torch.save(model, "model.torch")
+
+
 def main():
+    wandb.init(project='dependable-classification', entity='implication-elimination')
+    config = wandb.config
+
     data_a = pd.read_excel('./data/trainingdata_a.xls')
     train_dataset, test_dataset = prepare_data(data_a)
 
     # Create simple network
-    neurons = 8
-    inputs = 2
-    classes = 2
+    neurons = config.neurons
     model = nn.Sequential(
-        nn.Linear(inputs, neurons),
+        nn.Linear(2, neurons),
         nn.ReLU(),
-        nn.Linear(neurons, classes),
+        nn.Linear(neurons, 2),
     )
-
-    device = torch.device("cpu")
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32)
-    criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
-    epochs = 100
+    device = torch.device("cpu")
+    criterion = nn.CrossEntropyLoss().to(device)
 
     # Train network / load already trained network
-    try:
-        model = torch.load(model_path)
-    except FileNotFoundError:
-        pbar = tqdm(range(epochs))
-        training_accuracy, training_loss = 0, 0
-        for epoch in pbar:
-            pbar.set_description(
-                "(Loss: {:.6f}, Accuracy: {:.4f}) - Progress: ".format(training_loss, training_accuracy))
-            training_accuracy, training_loss = train(model, device, train_loader, criterion, optimizer,
-                                                     epoch)
-        torch.save(model, "model.torch")
+    if config.cache_model:
+        try:
+            model = torch.load(model_path)
+        except FileNotFoundError:
+            train_model(model, criterion, device, train_loader)
+    else:
+        train_model(model, criterion, device, train_loader)
 
     # Check test accuracy
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32)
-    test_acc, test_loss = validate(model, device, test_loader, criterion)
-    print("Test Acc: {:.2f}, Test Loss: {:.2f}".format(test_acc, test_loss))
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size)
+    test_acc, test_loss = test(model, device, test_loader, criterion)
+    wandb.log({"test_loss": test_loss})
 
     # Evaluate boundaries
-    threshold = 0.5
-    ptb = PerturbationLpNorm(norm=np.inf, eps=0.1)
+    threshold = config.threshold
+    ptb = PerturbationLpNorm(norm=np.inf, eps=config.eps)
 
     train_acc, train_verified_acc = compute_accs(model, train_loader, threshold, ptb)
-    print("train_acc:", train_acc)
-    print("train_verified_acc:", train_verified_acc)
-
     test_acc, test_verified_acc = compute_accs(model, test_loader, threshold, ptb)
-    print("test_acc:", test_acc)
-    print("test_verified_acc:", test_verified_acc)
 
-    print("done")
+    wandb.log({
+        "train_acc": train_acc,
+        "train_verified_acc": train_verified_acc,
+        "test_acc": test_acc,
+        "test_verified_acc": test_verified_acc
+    })
 
 
 if __name__ == '__main__':

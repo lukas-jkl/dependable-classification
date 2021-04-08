@@ -1,0 +1,22 @@
+---
+epochs:
+  desc: Number of epochs to train over
+  value: 200
+batch_size:
+  desc: Size of each mini-batch
+  value: 32
+lr:
+  desc: Learning rate
+  value: 0.005
+neurons:
+  desc: Number of neurons in hidden layer
+  value: 8
+threshold:
+  desc: assign class 0 if probability for class 0 is >= threshold
+  value: 0.5
+eps:
+  desc: epsilon for perturbation norm in verified accuracy
+  value: 0.1
+cache_model:
+  desc: only train the model if it isn't cached yet
+  value: False
