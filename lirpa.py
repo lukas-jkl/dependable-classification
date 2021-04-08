@@ -6,6 +6,7 @@ from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import wandb
+import matplotlib.pyplot as plt
 
 # evaluate the model on the given set
 def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> (float, float):
@@ -65,6 +66,34 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (sum_correct / len(train_loader.dataset)), sum_loss / len(train_loader.dataset)
 
 
+def plot_results(ub_predictions, lb_predictions, predictions, data_loader, epsilon, log_name):
+    data, targets = data_loader.dataset.dataset[data_loader.dataset.indices]
+
+    correct = (np.array(predictions) == targets.numpy())
+    label_0 = (np.array(predictions) == 0)
+    label_1 = (np.array(predictions) == 1)
+    verified = (np.array(ub_predictions) == np.array(lb_predictions)) & correct
+
+    fig, ax = plt.subplots(figsize=(12, 12))
+    plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="blue", label="0")
+    plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="green", label="1")
+    plt.scatter(data[label_0 & np.invert(correct)][:, 0], data[label_0 & np.invert(correct)][:, 1], c="cyan",
+                label="0_incorrect")
+    plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="lawngreen",
+                label="1_incorrect")
+
+    for v, c in zip([True, False], ["grey", "yellow"]):
+        points = data[verified ^ (not v)]
+        for i in range(len(points)):
+            cir = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.05)
+            ax.add_patch(cir)
+
+    ax.set_aspect('equal')
+    plt.legend(loc='upper right')
+    wandb.log({log_name: [wandb.Image(plt, caption="Predictions")]})
+    plt.show()
+
+
 def compute_accs(model, data_loader, threshold, ptb):
     """ Compute accuracy and verified accuracy
     
@@ -79,6 +108,8 @@ def compute_accs(model, data_loader, threshold, ptb):
     acc = 0
     verified_acc = 0
 
+    lb_classes, ub_classes, predicted_classes = [], [], []
+
     for data, target in tqdm(data_loader):
         model = BoundedModule(model, data)
         my_input = BoundedTensor(data, ptb)
@@ -88,19 +119,28 @@ def compute_accs(model, data_loader, threshold, ptb):
         pred_class = (softmax(prediction).squeeze()[:, 0] < threshold).int()
         lb_class = (softmax(lb).squeeze()[:, 0] < threshold).int()
         ub_class = (softmax(ub).squeeze()[:, 0] < threshold).int()
-
         acc += torch.sum(pred_class == target)
-        verified_acc += torch.sum(torch.logical_and(torch.logical_and(pred_class == target, lb_class == target), ub_class == target))
+        verified_acc += torch.sum(torch.logical_and(torch.logical_and(pred_class == target, lb_class == target),
+                                                    ub_class == target))
+        lb_classes += list(lb_class.detach().numpy())
+        ub_classes += list(ub_class.detach().numpy())
+        predicted_classes += list(pred_class.detach().numpy())
 
     acc = acc.item() / len(data_loader.dataset)
     verified_acc = verified_acc.item() / len(data_loader.dataset)
 
-    return acc, verified_acc
+    return {
+        "accuracy": acc,
+        "verified_accuracy": verified_acc,
+        "ub_classes": ub_classes,
+        "lb_classes": lb_classes,
+        "predicted_classes": predicted_classes
+    }
 
 
 def train_model(model, criterion, device, train_loader):
     config = wandb.config
-    
+
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     pbar = tqdm(range(config.epochs))
@@ -109,12 +149,12 @@ def train_model(model, criterion, device, train_loader):
         pbar.set_description(
             "(Loss: {:.6f}, Accuracy: {:.4f}) - Progress: ".format(training_loss, training_accuracy))
         training_accuracy, training_loss = train(model, device, train_loader, criterion, optimizer,
-                                                    epoch)
+                                                 epoch)
         wandb.log({
             "epoch": epoch,
             "train_acc": training_accuracy,
             "train_loss": training_loss
-        })    
+        })
     torch.save(model, "model.torch")
 
 
@@ -132,7 +172,7 @@ def main():
         nn.ReLU(),
         nn.Linear(neurons, 2),
     )
-    
+
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
     device = torch.device("cpu")
@@ -156,8 +196,17 @@ def main():
     threshold = config.threshold
     ptb = PerturbationLpNorm(norm=np.inf, eps=config.eps)
 
-    train_acc, train_verified_acc = compute_accs(model, train_loader, threshold, ptb)
-    test_acc, test_verified_acc = compute_accs(model, test_loader, threshold, ptb)
+    results_train = compute_accs(model, train_loader, threshold, ptb)
+    train_acc = results_train["accuracy"]
+    train_verified_acc = results_train["verified_accuracy"]
+    plot_results(results_train["ub_classes"], results_train["lb_classes"], results_train["predicted_classes"],
+                 train_loader, config.eps, "train_results")
+
+    results_test = compute_accs(model, test_loader, threshold, ptb)
+    plot_results(results_test["ub_classes"], results_test["lb_classes"], results_test["predicted_classes"],
+                 test_loader, config.eps, "test_results")
+    test_acc = results_test["accuracy"]
+    test_verified_acc = results_test["verified_accuracy"]
 
     wandb.log({
         "train_acc": train_acc,
