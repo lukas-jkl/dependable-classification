@@ -3,12 +3,12 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
 
 # evaluate the model on the given set
-def validate(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion):
+def validate(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> (float, float):
     sum_loss, sum_correct = 0, 0
     margin = torch.Tensor([]).to(device)
 
@@ -29,7 +29,7 @@ def validate(model: nn.Sequential, device: torch.device, data_loader: DataLoader
     return (sum_correct / len(data_loader.dataset)), sum_loss / len(data_loader.dataset)
 
 
-def prepare_data(data: pd.DataFrame, train_size: float = 0.8):
+def prepare_data(data: pd.DataFrame, train_size: float = 0.8) -> (Dataset, Dataset):
     X = torch.tensor(data.loc[:, ["x_i1", "x_i2"]].values).float()
     Y = torch.tensor(data.l_i.values)
     dataset = torch.utils.data.TensorDataset(X, Y)
@@ -42,7 +42,7 @@ def prepare_data(data: pd.DataFrame, train_size: float = 0.8):
 
 
 def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion,
-          optimizer, epoch: int):
+          optimizer, epoch: int) -> (float, float):
     sum_loss, sum_correct = 0, 0
     # switch to train mode
     model.train()
@@ -85,15 +85,15 @@ def compute_accs(model, data_loader, threshold, ptb):
         prediction = model(my_input)
         lb, ub = model.compute_bounds(x=(my_input,), method="backward")
 
-        pred_class = (softmax(prediction).squeeze()[0] < threshold).int()
-        lb_class = (softmax(lb).squeeze()[0] < threshold).int()
-        ub_class = (softmax(ub).squeeze()[0] < threshold).int()
+        pred_class = (softmax(prediction).squeeze()[:, 0] < threshold).int()
+        lb_class = (softmax(lb).squeeze()[:, 0] < threshold).int()
+        ub_class = (softmax(ub).squeeze()[:, 0] < threshold).int()
 
         acc += torch.sum(pred_class == target)
-        verified_acc += torch.sum(pred_class == target and lb_class == target and ub_class == target)
+        verified_acc += torch.sum(torch.logical_and(torch.logical_and(pred_class == target, lb_class == target), ub_class == target))
 
-    acc = acc.item() / len(data_loader)
-    verified_acc = verified_acc.item() / len(data_loader)
+    acc = acc.item() / len(data_loader.dataset)
+    verified_acc = verified_acc.item() / len(data_loader.dataset)
 
     return acc, verified_acc
 
@@ -113,9 +113,9 @@ def main():
     )
 
     device = torch.device("cpu")
-    train_loader = torch.utils.data.DataLoader(train_dataset)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32)
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005)
     model_path = "model.torch"
     epochs = 100
 
@@ -133,7 +133,7 @@ def main():
         torch.save(model, "model.torch")
 
     # Check test accuracy
-    test_loader = torch.utils.data.DataLoader(test_dataset)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=32)
     test_acc, test_loss = validate(model, device, test_loader, criterion)
     print("Test Acc: {:.2f}, Test Loss: {:.2f}".format(test_acc, test_loss))
 
