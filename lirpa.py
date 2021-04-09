@@ -162,8 +162,8 @@ def main():
     wandb.init(project='dependable-classification', entity='implication-elimination')
     config = wandb.config
 
-    data_a = pd.read_excel('./data/trainingdata_a.xls')
-    train_dataset, test_dataset = prepare_data(data_a)
+    data = pd.read_excel(config.data_path)
+    train_dataset, test_dataset = prepare_data(data)
 
     # Create simple network
     neurons = config.neurons
