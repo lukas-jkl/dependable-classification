@@ -173,6 +173,8 @@ def main():
         nn.Linear(neurons, 2),
     )
 
+    wandb.watch(model)
+
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
     device = torch.device("cpu")
