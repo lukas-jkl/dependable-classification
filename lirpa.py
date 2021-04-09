@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 import wandb
 import matplotlib.pyplot as plt
+from sklearn.metrics import precision_recall_fscore_support
 
 
 # evaluate the model on the given set
@@ -182,6 +183,16 @@ def train_model(model, criterion, device, train_loader, val_loader, num_epochs_e
     torch.save(model, "model.torch")
 
 
+def precision_recall_f1_table(y_true, y_pred, labels=[0, 1]) -> pd.DataFrame:
+    table_frame = pd.DataFrame(columns=["label", "precision", "recall", "f1", "support"])  # force column order
+    precisions, recalls, fbetas, supports = precision_recall_fscore_support(y_true, y_pred, labels=labels)
+    for label, prec, recall, fbeta, support in zip(labels, precisions, recalls, fbetas, supports):
+        table_frame = table_frame.append(
+            {"label": int(label), "precision": prec, "recall": recall, "f1": fbeta, "support": support},
+            ignore_index=True)
+    return table_frame
+
+
 def main():
     wandb.init(project='dependable-classification', entity='implication-elimination')
     config = wandb.config
@@ -228,10 +239,18 @@ def main():
     train_verified_acc = results_train["verified_accuracy"]
     plot_results(results_train["ub_classes"], results_train["lb_classes"], results_train["predicted_classes"],
                  train_loader, config.pert_norm, config.pert_eps, "train_results")
+    train_table = precision_recall_f1_table(train_loader.dataset.dataset[train_loader.dataset.indices][1],
+                                            results_train["predicted_classes"])
+    train_wandb_table = wandb.Table(dataframe=train_table)
+    wandb.log({"train_prec_recall_f1": train_wandb_table})
 
     results_test = compute_accs(model, test_loader, threshold, ptb)
     plot_results(results_test["ub_classes"], results_test["lb_classes"], results_test["predicted_classes"],
                  test_loader, config.pert_norm, config.pert_eps, "test_results")
+    test_table = precision_recall_f1_table(test_loader.dataset.dataset[test_loader.dataset.indices][1],
+                                           results_test["predicted_classes"])
+    test_wandb_table = wandb.Table(dataframe=test_table)
+    wandb.log({"test_prec_recall_f1": test_wandb_table})
     test_acc = results_test["accuracy"]
     test_verified_acc = results_test["verified_accuracy"]
 
