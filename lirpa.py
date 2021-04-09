@@ -8,6 +8,7 @@ from tqdm import tqdm
 import wandb
 import matplotlib.pyplot as plt
 
+
 # evaluate the model on the given set
 def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> (float, float):
     sum_loss, sum_correct = 0, 0
@@ -30,20 +31,20 @@ def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
     return (sum_correct / len(data_loader.dataset)), sum_loss / len(data_loader.dataset)
 
 
-def prepare_data(data: pd.DataFrame, train_size: float = 0.8) -> (Dataset, Dataset):
+def prepare_data(data: pd.DataFrame, train_split: float, val_split: float) -> (Dataset, Dataset, Dataset):
     X = torch.tensor(data.loc[:, ["x_i1", "x_i2"]].values).float()
     Y = torch.tensor(data.l_i.values)
     dataset = torch.utils.data.TensorDataset(X, Y)
-    train_size = round(X.shape[0] * train_size)
-    test_size = X.shape[0] - train_size
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, (train_size, test_size)
+    train_size = round(X.shape[0] * train_split * (1 - val_split))
+    val_size = round(X.shape[0] * train_split * val_split)
+    test_size = X.shape[0] - train_size - val_size
+    train_dataset, test_dataset, val_dataset = torch.utils.data.random_split(
+        dataset, (train_size, test_size, val_size)
     )
-    return train_dataset, test_dataset
+    return train_dataset, test_dataset, val_dataset
 
 
-def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion,
-          optimizer, epoch: int) -> (float, float):
+def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion, optimizer) -> (float, float):
     sum_loss, sum_correct = 0, 0
     # switch to train mode
     model.train()
@@ -143,22 +144,40 @@ def compute_accs(model, data_loader, threshold, ptb):
     }
 
 
-def train_model(model, criterion, device, train_loader):
+def train_model(model, criterion, device, train_loader, val_loader, num_epochs_early_stopping=0):
     config = wandb.config
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
 
     pbar = tqdm(range(config.epochs))
-    training_accuracy, training_loss = 0, 0
+    train_accuracy, train_loss = 0, 0
+    val_accuracy, val_loss = 0, 0
+    min_val_loss = None
+    num_epochs_no_improvement = 0
     for epoch in pbar:
         pbar.set_description(
-            "(Loss: {:.6f}, Accuracy: {:.4f}) - Progress: ".format(training_loss, training_accuracy))
-        training_accuracy, training_loss = train(model, device, train_loader, criterion, optimizer,
-                                                 epoch)
+            "(Loss: {:.6f}, Accuracy: {:.4f}, Val_Loss: {:.6f}, Val_Accuracy: {:.4f}) - Progress: ".format(
+                train_loss, train_accuracy, val_loss, val_accuracy))
+        train_accuracy, train_loss = train(model, device, train_loader, criterion, optimizer)
+
+        if len(val_loader.dataset) > 0:
+            val_accuracy, val_loss = test(model, device, val_loader, criterion)
+            if num_epochs_early_stopping:
+                if min_val_loss is None or val_loss < min_val_loss:
+                    min_val_loss = val_loss
+                    num_epochs_no_improvement = 0
+                else:
+                    num_epochs_no_improvement += 1
+                if num_epochs_no_improvement >= num_epochs_early_stopping:
+                    print("Stopping training due to early stopping")
+                    break
+
         wandb.log({
             "epoch": epoch,
-            "train_acc": training_accuracy,
-            "train_loss": training_loss
+            "train_acc": train_accuracy,
+            "train_loss": train_loss,
+            "val_acc": val_accuracy,
+            "val_loss": val_loss
         })
     torch.save(model, "model.torch")
 
@@ -168,7 +187,7 @@ def main():
     config = wandb.config
 
     data = pd.read_excel(config.data_path)
-    train_dataset, test_dataset = prepare_data(data)
+    train_dataset, test_dataset, val_dataset = prepare_data(data, config.train_split, config.val_split)
 
     # Create simple network
     neurons = config.neurons
@@ -181,6 +200,7 @@ def main():
     wandb.watch(model)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
     device = torch.device("cpu")
     criterion = nn.CrossEntropyLoss().to(device)
@@ -190,9 +210,9 @@ def main():
         try:
             model = torch.load(model_path)
         except FileNotFoundError:
-            train_model(model, criterion, device, train_loader)
+            train_model(model, criterion, device, train_loader, val_loader, config.early_stopp_epochs)
     else:
-        train_model(model, criterion, device, train_loader)
+        train_model(model, criterion, device, train_loader, val_loader, config.early_stopp_epochs)
 
     # Check test accuracy
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size)

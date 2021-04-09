@@ -29,3 +29,12 @@ pert_eps:
 cache_model:
   desc: only train the model if it isn't cached yet
   value: False
+train_split:
+  desc: fraction of the data used for training
+  value: 0.8
+val_split:
+  desc: fraction of the training data used as validation set
+  value: 0.1
+early_stopp_epochs:
+  desc: number of epochs used for early stopping (0 to disable early stopping)
+  value: 0
