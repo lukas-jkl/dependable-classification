@@ -66,7 +66,7 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (sum_correct / len(train_loader.dataset)), sum_loss / len(train_loader.dataset)
 
 
-def plot_results(ub_predictions, lb_predictions, predictions, data_loader, epsilon, log_name):
+def plot_results(ub_predictions, lb_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
     data, targets = data_loader.dataset.dataset[data_loader.dataset.indices]
 
     correct = (np.array(predictions) == targets.numpy())
@@ -75,18 +75,23 @@ def plot_results(ub_predictions, lb_predictions, predictions, data_loader, epsil
     verified = (np.array(ub_predictions) == np.array(lb_predictions)) & correct
 
     fig, ax = plt.subplots(figsize=(12, 12))
-    plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="blue", label="0")
-    plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="green", label="1")
-    plt.scatter(data[label_0 & np.invert(correct)][:, 0], data[label_0 & np.invert(correct)][:, 1], c="cyan",
-                label="0_incorrect")
-    plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="lawngreen",
-                label="1_incorrect")
+    plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="mediumblue", label="0", s=10, zorder=10)
+    plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="green", label="1", s=10, zorder=10)
+    plt.scatter(data[label_0 & np.invert(correct)][:, 0], data[label_0 & np.invert(correct)][:, 1], c="midnightblue",
+                label="0 (true: 1)", s=20, marker='x', zorder=15)
+    plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="limegreen",
+                label="1 (true: 0)", s=20, marker='x', zorder=15)
 
     for v, c in zip([True, False], ["grey", "yellow"]):
         points = data[verified ^ (not v)]
         for i in range(len(points)):
-            cir = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.05)
-            ax.add_patch(cir)
+            if pert_norm == 2:
+                patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.05, zorder=0)
+            elif pert_norm == np.inf:
+                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon, width=epsilon, color=c, fill=True, alpha=0.05, zorder=0)
+            else:
+                raise RuntimeError(f"{pert_norm}-norm not supported for plotting")
+            ax.add_patch(patch)
 
     ax.set_aspect('equal')
     plt.legend(loc='upper right')
@@ -196,17 +201,17 @@ def main():
 
     # Evaluate boundaries
     threshold = config.threshold
-    ptb = PerturbationLpNorm(norm=np.inf, eps=config.eps)
+    ptb = PerturbationLpNorm(norm=config.pert_norm, eps=config.pert_eps)
 
     results_train = compute_accs(model, train_loader, threshold, ptb)
     train_acc = results_train["accuracy"]
     train_verified_acc = results_train["verified_accuracy"]
     plot_results(results_train["ub_classes"], results_train["lb_classes"], results_train["predicted_classes"],
-                 train_loader, config.eps, "train_results")
+                 train_loader, config.pert_norm, config.pert_eps, "train_results")
 
     results_test = compute_accs(model, test_loader, threshold, ptb)
     plot_results(results_test["ub_classes"], results_test["lb_classes"], results_test["predicted_classes"],
-                 test_loader, config.eps, "test_results")
+                 test_loader, config.pert_norm, config.pert_eps, "test_results")
     test_acc = results_test["accuracy"]
     test_verified_acc = results_test["verified_accuracy"]
 

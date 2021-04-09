@@ -19,9 +19,13 @@ neurons:
 threshold:
   desc: assign class 0 if probability for class 0 is >= threshold
   value: 0.5
-eps:
+pert_norm:
+  desc: which p-norm to use for the input perturbation (plots only supported for 2 and inf)
+  # value: 2
+  value: .inf
+pert_eps:
   desc: epsilon for perturbation norm in verified accuracy
-  value: 0.1
+  value: 0.05
 cache_model:
   desc: only train the model if it isn't cached yet
   value: False
