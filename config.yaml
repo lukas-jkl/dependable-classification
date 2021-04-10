@@ -1,9 +1,9 @@
 ---
-data_path:
-  desc: path to dataset file
-  value: ./data/trainingdata_a.xls
-  # value: ./data/trainingdata_b.xls
-  # value: ./data/trainingdata_c.xls
+dataset:
+  desc: name of the dataset
+  value: a
+  # value: b
+  # value: c
 epochs:
   desc: Number of epochs to train over
   value: 200

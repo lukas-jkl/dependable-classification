@@ -194,10 +194,12 @@ def precision_recall_f1_table(y_true, y_pred, labels=[0, 1]) -> pd.DataFrame:
 
 
 def main():
-    wandb.init(project='dependable-classification', entity='implication-elimination')
+    wandb.init(project='dependable-classification', entity='implication-elimination', config='config.yaml')
     config = wandb.config
+    config.model = 'NN'
 
-    data = pd.read_excel(config.data_path)
+    data_path = f"./data/trainingdata_{config.dataset}.xls"
+    data = pd.read_excel(data_path)
     train_dataset, test_dataset, val_dataset = prepare_data(data, config.train_split, config.val_split)
 
     # Create simple network
