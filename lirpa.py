@@ -84,8 +84,8 @@ def plot_results(ub_predictions, lb_predictions, predictions, data_loader, pert_
     plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="limegreen",
                 label="1 (true: 0)", s=20, marker='x', zorder=15)
 
-    for v, c in zip([True, False], ["grey", "yellow"]):
-        points = data[verified ^ (not v)]
+    for idx, c in zip([label_0 & verified, label_1 & verified], ["mediumblue", "green"]):
+        points = data[idx]
         for i in range(len(points)):
             if pert_norm == 2:
                 patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.05, zorder=0)
