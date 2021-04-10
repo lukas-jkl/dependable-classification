@@ -236,6 +236,7 @@ def main():
     threshold = config.threshold
     ptb = PerturbationLpNorm(norm=config.pert_norm, eps=config.pert_eps)
 
+    # Train results
     results_train = compute_accs(model, train_loader, threshold, ptb)
     train_acc = results_train["accuracy"]
     train_verified_acc = results_train["verified_accuracy"]
@@ -245,22 +246,27 @@ def main():
                                             results_train["predicted_classes"])
     train_wandb_table = wandb.Table(dataframe=train_table)
     wandb.log({"train_prec_recall_f1": train_wandb_table})
+    train_label_1_prec = train_table[train_table.label == 1].precision.values[0]
 
+    # Test results
     results_test = compute_accs(model, test_loader, threshold, ptb)
+    test_acc = results_test["accuracy"]
+    test_verified_acc = results_test["verified_accuracy"]
     plot_results(results_test["ub_classes"], results_test["lb_classes"], results_test["predicted_classes"],
                  test_loader, config.pert_norm, config.pert_eps, "test_results")
     test_table = precision_recall_f1_table(test_loader.dataset.dataset[test_loader.dataset.indices][1],
                                            results_test["predicted_classes"])
     test_wandb_table = wandb.Table(dataframe=test_table)
     wandb.log({"test_prec_recall_f1": test_wandb_table})
-    test_acc = results_test["accuracy"]
-    test_verified_acc = results_test["verified_accuracy"]
+    test_label_1_prec = test_table[test_table.label == 1].precision.values[0]
 
     wandb.log({
         "train_acc": train_acc,
         "train_verified_acc": train_verified_acc,
+        "train_label_1_prec": train_label_1_prec,
         "test_acc": test_acc,
-        "test_verified_acc": test_verified_acc
+        "test_verified_acc": test_verified_acc,
+        "test_label_1_prec": test_label_1_prec
     })
 
 
