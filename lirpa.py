@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 import numpy as np
 import pandas as pd
 import torch
@@ -203,20 +205,22 @@ def main():
     train_dataset, test_dataset, val_dataset = prepare_data(data, config.train_split, config.val_split)
 
     # Create simple network
-    neurons = config.neurons
-    model = nn.Sequential(
-        nn.Linear(2, neurons),
-        nn.ReLU(),
-        nn.Linear(neurons, 2),
-    )
-
+    prev_neurons = 2
+    layers = OrderedDict()
+    for i, neuron in enumerate(config.neurons):
+        layers[str(i) + "_layer"] = nn.Linear(prev_neurons, neuron)
+        if i != len(config.neurons) - 1:
+            layers[str(i) + "_activation"] = nn.ReLU()
+        prev_neurons = neuron
+    layers["output_layer"] = nn.Linear(prev_neurons, 2)
+    model = nn.Sequential(layers)
     wandb.watch(model)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
     device = torch.device("cpu")
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = nn.CrossEntropyLoss(weight=torch.tensor(torch.tensor(config.loss_weights))).to(device)
 
     # Train network / load already trained network
     if config.cache_model:
