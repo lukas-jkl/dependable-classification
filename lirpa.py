@@ -70,13 +70,14 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (sum_correct / len(train_loader.dataset)), sum_loss / len(train_loader.dataset)
 
 
-def plot_results(ub_predictions, lb_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
+def plot_results(certain_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
     data, targets = data_loader.dataset.dataset[data_loader.dataset.indices]
 
     correct = (np.array(predictions) == targets.numpy())
     label_0 = (np.array(predictions) == 0)
     label_1 = (np.array(predictions) == 1)
-    verified = (np.array(ub_predictions) == np.array(lb_predictions)) & correct
+    verified_label_0 = (np.array(certain_predictions) == 0)
+    verified_label_1 = (np.array(certain_predictions) == 1)
 
     fig, ax = plt.subplots(figsize=(12, 12))
     plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="mediumblue", label="0", s=10, zorder=10)
@@ -86,7 +87,7 @@ def plot_results(ub_predictions, lb_predictions, predictions, data_loader, pert_
     plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="limegreen",
                 label="1 (true: 0)", s=20, marker='x', zorder=15)
 
-    for idx, c in zip([label_0 & verified, label_1 & verified], ["mediumblue", "green"]):
+    for idx, c in zip([verified_label_0, verified_label_1], ["mediumblue", "green"]):
         points = data[idx]
         for i in range(len(points)):
             if pert_norm == 2:
@@ -104,7 +105,7 @@ def plot_results(ub_predictions, lb_predictions, predictions, data_loader, pert_
 
 
 def compute_accs(model, data_loader, threshold, ptb):
-    """ Compute accuracy and verified accuracy
+    """ Compute prediction/accuracy as well as verified-predictions/verified-accuracy
     
     model: base model
     data_loader: where to load data from
@@ -117,7 +118,7 @@ def compute_accs(model, data_loader, threshold, ptb):
     acc = 0
     verified_acc = 0
 
-    lb_classes, ub_classes, predicted_classes = [], [], []
+    verified_predicted_classes, predicted_classes = [], []
 
     for data, target in tqdm(data_loader):
         model = BoundedModule(model, data)
@@ -126,14 +127,15 @@ def compute_accs(model, data_loader, threshold, ptb):
         lb, ub = model.compute_bounds(x=(my_input,), method="backward")
 
         pred_class = (softmax(prediction).squeeze()[:, 0] < threshold).int()
-        lb_class = (softmax(lb).squeeze()[:, 0] < threshold).int()
-        ub_class = (softmax(ub).squeeze()[:, 0] < threshold).int()
         acc += torch.sum(pred_class == target)
-        verified_acc += torch.sum(torch.logical_and(torch.logical_and(pred_class == target, lb_class == target),
-                                                    ub_class == target))
-        lb_classes += list(lb_class.detach().numpy())
-        ub_classes += list(ub_class.detach().numpy())
+
+        verified_prediction = torch.full_like(pred_class, fill_value=-1)  # -1 as label for uncertainty
+        verified_prediction[lb[:, 1] > ub[:, 0]] = 1
+        verified_prediction[lb[:, 0] > ub[:, 1]] = 0
+        verified_acc += torch.sum(verified_prediction == target)
+
         predicted_classes += list(pred_class.detach().numpy())
+        verified_predicted_classes += list(verified_prediction.detach().numpy())
 
     acc = acc.item() / len(data_loader.dataset)
     verified_acc = verified_acc.item() / len(data_loader.dataset)
@@ -141,8 +143,7 @@ def compute_accs(model, data_loader, threshold, ptb):
     return {
         "accuracy": acc,
         "verified_accuracy": verified_acc,
-        "ub_classes": ub_classes,
-        "lb_classes": lb_classes,
+        "verified_predicted_classes": verified_predicted_classes,
         "predicted_classes": predicted_classes
     }
 
@@ -242,35 +243,35 @@ def main():
 
     # Train results
     results_train = compute_accs(model, train_loader, threshold, ptb)
-    train_acc = results_train["accuracy"]
-    train_verified_acc = results_train["verified_accuracy"]
-    plot_results(results_train["ub_classes"], results_train["lb_classes"], results_train["predicted_classes"],
+    plot_results(results_train["verified_predicted_classes"], results_train["predicted_classes"],
                  train_loader, config.pert_norm, config.pert_eps, "train_results")
-    train_table = precision_recall_f1_table(train_loader.dataset.dataset[train_loader.dataset.indices][1],
-                                            results_train["predicted_classes"])
+    train_samples = train_loader.dataset.dataset[train_loader.dataset.indices][1]
+    train_table = precision_recall_f1_table(train_samples, results_train["predicted_classes"])
+    verified_train_table = precision_recall_f1_table(train_samples, results_train["verified_predicted_classes"])
     train_wandb_table = wandb.Table(dataframe=train_table)
     wandb.log({"train_prec_recall_f1": train_wandb_table})
-    train_label_1_prec = train_table[train_table.label == 1].precision.values[0]
 
     # Test results
     results_test = compute_accs(model, test_loader, threshold, ptb)
-    test_acc = results_test["accuracy"]
-    test_verified_acc = results_test["verified_accuracy"]
-    plot_results(results_test["ub_classes"], results_test["lb_classes"], results_test["predicted_classes"],
+    plot_results(results_test["verified_predicted_classes"], results_test["predicted_classes"],
                  test_loader, config.pert_norm, config.pert_eps, "test_results")
-    test_table = precision_recall_f1_table(test_loader.dataset.dataset[test_loader.dataset.indices][1],
-                                           results_test["predicted_classes"])
+    test_samples = train_loader.dataset.dataset[test_loader.dataset.indices][1]
+    test_table = precision_recall_f1_table(test_samples, results_test["predicted_classes"])
+    verified_test_table = precision_recall_f1_table(test_samples, results_test["verified_predicted_classes"])
     test_wandb_table = wandb.Table(dataframe=test_table)
+    verified_test_wandb_table = wandb.Table(dataframe=verified_test_table)
     wandb.log({"test_prec_recall_f1": test_wandb_table})
-    test_label_1_prec = test_table[test_table.label == 1].precision.values[0]
+    wandb.log({"test_verified_prec_recall_f1": verified_test_wandb_table})
 
     wandb.log({
-        "train_acc": train_acc,
-        "train_verified_acc": train_verified_acc,
-        "train_label_1_prec": train_label_1_prec,
-        "test_acc": test_acc,
-        "test_verified_acc": test_verified_acc,
-        "test_label_1_prec": test_label_1_prec
+        "train_acc": results_train["accuracy"],
+        "train_verified_acc": results_train["verified_accuracy"],
+        "train_label_1_prec": train_table[train_table.label == 1].precision.values[0],
+        "train_verified_label_1_prec": verified_train_table[verified_train_table.label == 1].precision.values[0],
+        "test_acc": results_test["accuracy"],
+        "test_verified_acc": results_test["verified_accuracy"],
+        "test_verified_label_1_prec": verified_test_table[verified_test_table.label == 1].precision.values[0],
+        "test_label_1_prec": test_table[test_table.label == 1].precision.values[0]
     })
 
 
