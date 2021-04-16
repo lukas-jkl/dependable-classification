@@ -17,7 +17,7 @@ neurons:
   desc: Number of neurons in hidden layers
   value: [128, 32]
 threshold:
-  desc: assign class 0 if probability for class 0 is >= threshold
+  desc: assign class 0 (= green = safety-critical) if its probability is >= threshold
   value: 0.5
 loss_weights:
   desc: weights for weighted loss
