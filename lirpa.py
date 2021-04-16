@@ -29,7 +29,7 @@ def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
             # compute the classification error and loss
             pred = output.max(1)[1]
             sum_correct += pred.eq(target).sum().item()
-            sum_loss += len(data) * criterion(output, target).item()
+            sum_loss += len(data) * criterion(output, target.unsqueeze(dim=1).float()).item()
 
     return (sum_correct / len(data_loader.dataset)), sum_loss / len(data_loader.dataset)
 
@@ -58,7 +58,7 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
         output = model(data)
 
         # compute the classification error and loss
-        loss = criterion(output, target)
+        loss = criterion(output, target.unsqueeze(dim=1).float())
         pred = output.max(1)[1]
         sum_correct += pred.eq(target).sum().item()
         sum_loss += len(data) * loss.item()
@@ -70,21 +70,21 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (sum_correct / len(train_loader.dataset)), sum_loss / len(train_loader.dataset)
 
 
-def plot_results(certain_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
+def plot_results(verified_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
     data, targets = data_loader.dataset.dataset[data_loader.dataset.indices]
 
-    correct = (np.array(predictions) == targets.numpy())
-    label_0 = (np.array(predictions) == 0)
-    label_1 = (np.array(predictions) == 1)
-    verified_label_0 = (np.array(certain_predictions) == 0)
-    verified_label_1 = (np.array(certain_predictions) == 1)
+    correct = (predictions.squeeze() == targets)
+    label_0 = (predictions == 0).squeeze()
+    label_1 = (predictions == 1).squeeze()
+    verified_label_0 = (verified_predictions == 0).squeeze()
+    verified_label_1 = (verified_predictions == 1).squeeze()
 
     fig, ax = plt.subplots(figsize=(12, 12))
     plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="mediumblue", label="0", s=10, zorder=10)
     plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="green", label="1", s=10, zorder=10)
-    plt.scatter(data[label_0 & np.invert(correct)][:, 0], data[label_0 & np.invert(correct)][:, 1], c="midnightblue",
+    plt.scatter(data[label_0 & np.invert(correct).bool()][:, 0], data[label_0 & np.invert(correct).bool()][:, 1], c="midnightblue",
                 label="0 (true: 1)", s=20, marker='x', zorder=15)
-    plt.scatter(data[label_1 & np.invert(correct)][:, 0], data[label_1 & np.invert(correct)][:, 1], c="limegreen",
+    plt.scatter(data[label_1 & np.invert(correct).bool()][:, 0], data[label_1 & np.invert(correct).bool()][:, 1], c="limegreen",
                 label="1 (true: 0)", s=20, marker='x', zorder=15)
 
     for idx, c in zip([verified_label_0, verified_label_1], ["mediumblue", "green"]):
@@ -126,16 +126,18 @@ def compute_accs(model, data_loader, threshold, ptb):
         prediction = model(my_input)
         lb, ub = model.compute_bounds(x=(my_input,), method="backward")
 
-        pred_class = (softmax(prediction).squeeze()[:, 0] < threshold).int()
+        pred_class = (torch.sigmoid(prediction) > threshold).int()
+        lb_class = (torch.sigmoid(lb) > threshold).int()
+        ub_class = (torch.sigmoid(ub) > threshold).int()
         acc += torch.sum(pred_class == target)
 
-        verified_prediction = torch.full_like(pred_class, fill_value=-1)  # -1 as label for uncertainty
-        verified_prediction[lb[:, 1] > ub[:, 0]] = 1
-        verified_prediction[lb[:, 0] > ub[:, 1]] = 0
+        verified_prediction = pred_class.clone()
+        verified_prediction[lb_class != ub_class] = -1
+
         verified_acc += torch.sum(verified_prediction == target)
 
-        predicted_classes += list(pred_class.detach().numpy())
-        verified_predicted_classes += list(verified_prediction.detach().numpy())
+        predicted_classes += list(pred_class.detach())
+        verified_predicted_classes += list(verified_prediction.detach())
 
     acc = acc.item() / len(data_loader.dataset)
     verified_acc = verified_acc.item() / len(data_loader.dataset)
@@ -143,8 +145,8 @@ def compute_accs(model, data_loader, threshold, ptb):
     return {
         "accuracy": acc,
         "verified_accuracy": verified_acc,
-        "verified_predicted_classes": verified_predicted_classes,
-        "predicted_classes": predicted_classes
+        "verified_predicted_classes": torch.stack(verified_predicted_classes),
+        "predicted_classes": torch.stack(predicted_classes)
     }
 
 
@@ -213,7 +215,7 @@ def main():
         if i != len(config.neurons) - 1:
             layers[str(i) + "_activation"] = nn.ReLU()
         prev_neurons = neuron
-    layers["output_layer"] = nn.Linear(prev_neurons, 2)
+    layers["output_layer"] = nn.Linear(prev_neurons, 1)
     model = nn.Sequential(layers)
     wandb.watch(model)
 
@@ -221,7 +223,7 @@ def main():
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.batch_size)
     model_path = "model.torch"
     device = torch.device("cpu")
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor(torch.tensor(config.loss_weights))).to(device)
+    criterion = nn.BCEWithLogitsLoss().to(device) # TODO maybe try weights
 
     # Train network / load already trained network
     if config.cache_model:

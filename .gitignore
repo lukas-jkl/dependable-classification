@@ -2,3 +2,4 @@
 .vscode/*
 wandb
 model.torch
+__pycache__
