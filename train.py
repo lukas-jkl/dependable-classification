@@ -54,7 +54,7 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (acc / len(train_loader.dataset)), loss / len(train_loader.dataset)
 
 
-def train_model(model, criterion, device, train_loader, val_loader, num_epochs_early_stopping=0):
+def train_model(model, criterion, device, train_loader, val_loader, patience=0):
     config = wandb.config
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
@@ -72,13 +72,13 @@ def train_model(model, criterion, device, train_loader, val_loader, num_epochs_e
 
         if len(val_loader.dataset) > 0:
             val_accuracy, val_loss = test(model, device, val_loader, criterion)
-            if num_epochs_early_stopping:
+            if patience:
                 if min_val_loss is None or val_loss < min_val_loss:
                     min_val_loss = val_loss
                     num_epochs_no_improvement = 0
                 else:
                     num_epochs_no_improvement += 1
-                if num_epochs_no_improvement >= num_epochs_early_stopping:
+                if num_epochs_no_improvement >= patience:
                     print("Stopping training due to early stopping")
                     break
 
@@ -146,9 +146,9 @@ def main():
         try:
             model = torch.load(config.cache_model_name)
         except FileNotFoundError:
-            train_model(model, criterion, device, train_loader, val_loader, config.early_stopp_epochs)
+            train_model(model, criterion, device, train_loader, val_loader, config.patience)
     else:
-        train_model(model, criterion, device, train_loader, val_loader, config.early_stopp_epochs)
+        train_model(model, criterion, device, train_loader, val_loader, config.patience)
 
     # Test
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config.batch_size)

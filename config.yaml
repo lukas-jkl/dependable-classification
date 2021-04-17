@@ -38,6 +38,6 @@ train_split:
 val_split:
   desc: fraction of the training data used as validation set
   value: 0.1
-early_stopp_epochs:
+patience:
   desc: number of epochs used for early stopping (0 to disable early stopping)
-  value: 0
+  value: 20
