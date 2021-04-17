@@ -1,0 +1,10 @@
+-e git+https://github.com/KaidiXu/auto_LiRPA@c8935c6d22cd76e137b1a9b1b3ea67f7d234601d#egg=auto_LiRPA
+ipywidgets==7.6.2
+matplotlib==3.3.3
+numpy==1.20.0
+pandas==1.2.0
+scikit-learn==0.24.1
+torch==1.7.1
+tqdm==4.49.0
+wandb==0.10.26
+xlrd==2.0.1
