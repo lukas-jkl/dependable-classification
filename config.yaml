@@ -31,7 +31,7 @@ pert_eps:
   value: 0.05
 cache_model_name:
   desc: name of cached model (null to disable caching)
-  value: model.torch
+  value: null
 train_split:
   desc: fraction of the data used for training
   value: 0.8
@@ -40,4 +40,4 @@ val_split:
   value: 0.1
 patience:
   desc: number of epochs used for early stopping (0 to disable early stopping)
-  value: 20
+  value: 100
