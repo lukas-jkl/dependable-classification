@@ -13,9 +13,12 @@ batch_size:
 lr:
   desc: Learning rate
   value: 0.005
-neurons:
-  desc: Number of neurons in hidden layers
-  value: [128, 32]
+num_hidden_layers:
+  desc: Number of hidden layers
+  value: 1
+hidden_dim:
+  desc: Dimension of hidden layers
+  value: 128
 threshold:
   desc: assign class 0 (= green = safety-critical) if its probability is >= threshold
   value: 0.5
