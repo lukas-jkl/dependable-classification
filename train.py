@@ -22,8 +22,8 @@ def test(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
             output = model(data)
 
             # compute the classification error and loss
-            pred = output.max(1)[1]
-            acc += pred.eq(target).sum().item()
+            pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
+            acc += torch.sum(pred_class.squeeze() == target)
             loss += len(data) * criterion(output, target.unsqueeze(dim=1).float()).item()
 
     return (acc / len(data_loader.dataset)), loss / len(data_loader.dataset)
@@ -43,8 +43,8 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
 
         # compute the classification error and loss
         loss = criterion(output, target.unsqueeze(dim=1).float())
-        pred = output.max(1)[1]
-        acc += pred.eq(target).sum().item()
+        pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
+        acc += torch.sum(pred_class.squeeze() == target)
         loss += len(data) * loss.item()
 
         # compute the gradient
