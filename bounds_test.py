@@ -1,27 +1,23 @@
 import unittest
 import torch
-import lirpa
 import wandb
 import pandas as pd
-from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 import numpy as np
 from tqdm import tqdm
 
+import data_prep, evaluation
 
 class TestBounds(unittest.TestCase):
     def test_bounds(self):
         wandb.init(mode='disabled', config='config.yaml')
         config = wandb.config
-        model = torch.load("model.torch")
+        
+        assert config.cache_model_name is not None, "Cached model must exist to run this test"
+        model = torch.load(config.cache_model_name)
 
-        threshold = config.threshold
-        ptb = PerturbationLpNorm(norm=config.pert_norm, eps=config.pert_eps)
-
-        data_path = f"./data/trainingdata_{config.dataset}.xls"
-        data = pd.read_excel(data_path)
-        dataset, _, _ = lirpa.prepare_data(data, 1, 0)
+        dataset, _, _ = data_prep.prepare_data(config.dataset, 1, 0)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size)
-        results = lirpa.compute_accs(model, data_loader, threshold, ptb)
+        results = evaluation.compute_accs(model, data_loader, config.threshold, config.pert_norm, config.pert_eps)
 
         for i, (data, _) in enumerate(tqdm(dataset)):
             verified_label = results["verified_predicted_classes"][i]

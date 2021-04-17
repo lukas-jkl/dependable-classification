@@ -29,9 +29,9 @@ pert_norm:
 pert_eps:
   desc: epsilon for perturbation norm in verified accuracy
   value: 0.05
-cache_model:
-  desc: only train the model if it isn't cached yet
-  value: False
+cache_model_name:
+  desc: name of cached model (null to disable caching)
+  value: model.torch
 train_split:
   desc: fraction of the data used for training
   value: 0.8
