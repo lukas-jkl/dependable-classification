@@ -51,6 +51,7 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     sum_loss, sum_correct = 0, 0
     # switch to train mode
     model.train()
+    model.to(device)
     for i, (data, target) in enumerate(train_loader):
         data, target = data.to(device).view(data.size(0), -1), target.to(device)
 
