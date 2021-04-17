@@ -33,12 +33,12 @@ def compute_accs(model, data_loader, threshold, pert_norm, pert_eps):
         pred_class = (torch.sigmoid(prediction) > threshold).int()
         lb_class = (torch.sigmoid(lb) > threshold).int()
         ub_class = (torch.sigmoid(ub) > threshold).int()
-        acc += torch.sum(pred_class == target)
+        acc += torch.sum(pred_class.squeeze() == target)
 
         verified_prediction = pred_class.clone()
         verified_prediction[lb_class != ub_class] = -1
 
-        verified_acc += torch.sum(verified_prediction == target)
+        verified_acc += torch.sum(verified_prediction.squeeze() == target)
 
         predicted_classes += list(pred_class.detach())
         verified_predicted_classes += list(verified_prediction.detach())
