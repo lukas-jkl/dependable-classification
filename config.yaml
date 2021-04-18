@@ -43,4 +43,6 @@ val_split:
   value: 0.1
 patience:
   desc: number of epochs used for early stopping (0 to disable early stopping)
-  value: 100
+weight_decay:
+  desc: L2 penalty to impose on the weights for regularisation
+  value: 0.01

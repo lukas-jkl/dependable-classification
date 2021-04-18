@@ -57,7 +57,7 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
 def train_model(model, criterion, device, train_loader, val_loader, patience=0):
     config = wandb.config
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
     pbar = tqdm(range(config.epochs))
     train_accuracy, train_loss = 0, 0
