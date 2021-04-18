@@ -136,7 +136,7 @@ def main():
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.batch_size)
 
-    model = nn_model.create_model(config.num_hidden_layers, config.hidden_dim)
+    model = nn_model.create_model(config.num_hidden_layers, config.hidden_dim, config.dropout)
     print(model)
 
     device = torch.device("cpu")

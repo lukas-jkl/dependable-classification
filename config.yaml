@@ -46,3 +46,6 @@ patience:
 weight_decay:
   desc: L2 penalty to impose on the weights for regularisation
   value: 0.01
+dropout:
+  desc: probability of a neuron input being zeroed during training for regularisation
+  value: 0.25
