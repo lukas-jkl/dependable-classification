@@ -16,4 +16,4 @@ def prepare_data(dataset_name: str, train_split: float, val_split: float) -> Tup
     val_size = round(X.shape[0] * train_split * val_split)
     test_size = X.shape[0] - train_size - val_size
 
-    return torch.utils.data.random_split(dataset, (train_size, test_size, val_size))
+    return torch.utils.data.random_split(dataset, (train_size, test_size, val_size), generator=torch.Generator().manual_seed(42))
