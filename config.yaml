@@ -6,7 +6,10 @@ dataset:
   # value: c
 epochs:
   desc: Number of epochs to train over
-  value: 3000
+  value: 500
+device:
+  desc: torch device to train on
+  value: cuda:1
 batch_size:
   desc: Size of each mini-batch
   value: 32

@@ -92,11 +92,11 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
     torch.save(model, "model.torch")
 
 
-def evaluate(model, train_loader, test_loader):
+def evaluate(model, train_loader, test_loader, device):
     config = wandb.config
 
     # Train results
-    results_train = evaluation.compute_accs(model, train_loader, config.threshold, config.pert_norm, config.pert_eps)
+    results_train = evaluation.compute_accs(model, train_loader, config.threshold, config.pert_norm, config.pert_eps, device)
     evaluation.plot_results(results_train["verified_predicted_classes"], results_train["predicted_classes"],
                  train_loader, config.pert_norm, config.pert_eps, "train_results")
     train_samples = train_loader.dataset.dataset[train_loader.dataset.indices][1]
@@ -104,7 +104,7 @@ def evaluate(model, train_loader, test_loader):
     verified_train_table = evaluation.precision_recall_f1_table(train_samples, results_train["verified_predicted_classes"])
 
     # Test results
-    results_test = evaluation.compute_accs(model, test_loader, config.threshold, config.pert_norm, config.pert_eps)
+    results_test = evaluation.compute_accs(model, test_loader, config.threshold, config.pert_norm, config.pert_eps, device)
     evaluation.plot_results(results_test["verified_predicted_classes"], results_test["predicted_classes"],
                  test_loader, config.pert_norm, config.pert_eps, "test_results")
     test_samples = train_loader.dataset.dataset[test_loader.dataset.indices][1]
@@ -139,7 +139,7 @@ def main():
     model = nn_model.create_model(config.num_hidden_layers, config.hidden_dim, config.dropout)
     print(model)
 
-    device = torch.device("cpu")
+    device = torch.device(config.device)
     num_pos = torch.sum(train_dataset[:][1])
     pos_weight = (len(train_dataset) - num_pos) / num_pos
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight).to(device)
@@ -159,7 +159,7 @@ def main():
     wandb.log({"test_loss": test_loss})
 
     # Evaluate
-    evaluate(model, train_loader, test_loader)
+    evaluate(model, train_loader, test_loader, device)
 
 
 if __name__ == '__main__':

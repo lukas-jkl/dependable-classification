@@ -7,7 +7,7 @@ import torch
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from sklearn.metrics import precision_recall_fscore_support
 
-def compute_accs(model, data_loader, threshold, pert_norm, pert_eps):
+def compute_accs(model, data_loader, threshold, pert_norm, pert_eps, device):
     """ Compute prediction/accuracy as well as verified-predictions/verified-accuracy
     
     model: base model
@@ -25,6 +25,7 @@ def compute_accs(model, data_loader, threshold, pert_norm, pert_eps):
     verified_predicted_classes, predicted_classes = [], []
 
     for data, target in tqdm(data_loader):
+        data, target = data.to(device), target.to(device)
         model = BoundedModule(model, data)
         my_input = BoundedTensor(data, ptb)
         prediction = model(my_input)
@@ -49,8 +50,8 @@ def compute_accs(model, data_loader, threshold, pert_norm, pert_eps):
     return {
         "accuracy": acc,
         "verified_accuracy": verified_acc,
-        "verified_predicted_classes": torch.stack(verified_predicted_classes),
-        "predicted_classes": torch.stack(predicted_classes)
+        "verified_predicted_classes": torch.stack(verified_predicted_classes).to("cpu"),
+        "predicted_classes": torch.stack(predicted_classes).to("cpu")
     }
 
 
