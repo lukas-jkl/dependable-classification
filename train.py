@@ -3,14 +3,17 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import wandb
+import numpy as np
 from typing import Tuple
+from sklearn.metrics import precision_score
 
 import nn_model, data_prep, evaluation
 
 
-def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> Tuple[float, float]:
+def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> Tuple[float, float, float]:
     """ evaluate the model on the given set """
     loss, acc = 0, 0
+    f1_s = []
 
     # switch to evaluation mode
     model.eval()
@@ -25,8 +28,9 @@ def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
             pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
             acc += torch.sum(pred_class.squeeze() == target)
             loss += len(data) * criterion(output, target.unsqueeze(dim=1).float()).item()
+            f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0))
 
-    return (acc / len(data_loader.dataset)), loss / len(data_loader.dataset)
+    return (acc / len(data_loader.dataset)), loss / len(data_loader.dataset), np.mean(f1_s)
 
 
 def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion, optimizer) -> Tuple[float, float]:
@@ -61,17 +65,17 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
 
     pbar = tqdm(range(config.epochs))
     train_accuracy, train_loss = 0, 0
-    val_accuracy, val_loss = 0, 0
+    val_accuracy, val_loss, val_f1 = 0, 0, 0
     min_val_loss = None
     num_epochs_no_improvement = 0
     for epoch in pbar:
         pbar.set_description(
-            "(Loss: {:.6f}, Accuracy: {:.4f}, Val_Loss: {:.6f}, Val_Accuracy: {:.4f}) - Progress: ".format(
-                train_loss, train_accuracy, val_loss, val_accuracy))
+            "(Loss: {:.6f}, Accuracy: {:.4f}, Val_Loss: {:.6f}, Val_Acc: {:.4f}, Val_F1: {:.4f}) - Progress: ".format(
+                train_loss, train_accuracy, val_loss, val_accuracy, val_f1))
         train_accuracy, train_loss = train(model, device, train_loader, criterion, optimizer)
 
         if len(val_loader.dataset) > 0:
-            val_accuracy, val_loss = eval(model, device, val_loader, criterion)
+            val_accuracy, val_loss, val_f1 = eval(model, device, val_loader, criterion)
             if patience:
                 if min_val_loss is None or val_loss < min_val_loss:
                     min_val_loss = val_loss
@@ -87,7 +91,8 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
             "train_acc": train_accuracy,
             "train_loss": train_loss,
             "val_acc": val_accuracy,
-            "val_loss": val_loss
+            "val_loss": val_loss,
+            "val_f1": val_f1
         })
     torch.save(model, "model.torch")
 
