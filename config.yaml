@@ -35,9 +35,6 @@ pert_eps:
 cache_model_name:
   desc: name of cached model (null to disable caching)
   value: null
-train_split:
-  desc: fraction of the data used for training
-  value: 0.99
 val_split:
   desc: fraction of the training data used as validation set
   value: 0.2
