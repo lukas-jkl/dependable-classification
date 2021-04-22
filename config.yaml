@@ -6,7 +6,7 @@ dataset:
   # value: c
 epochs:
   desc: Number of epochs to train over
-  value: 500
+  value: 1000
 device:
   desc: torch device to train on
   value: cuda:1
@@ -15,19 +15,16 @@ batch_size:
   value: 32
 lr:
   desc: Learning rate
-  value: 0.005
+  value: 0.001
 num_hidden_layers:
   desc: Number of hidden layers
-  value: 1
+  value: 2
 hidden_dim:
   desc: Dimension of hidden layers
   value: 128
 threshold:
   desc: assign class 0 (= green = safety-critical) if its probability is >= threshold
   value: 0.5
-loss_weights:
-  desc: weights for weighted loss
-  value: [1., 1.]
 pert_norm:
   desc: which p-norm to use for the input perturbation (plots only supported for 2 and inf)
   # value: 2
@@ -40,16 +37,16 @@ cache_model_name:
   value: null
 train_split:
   desc: fraction of the data used for training
-  value: 0.8
+  value: 0.99
 val_split:
   desc: fraction of the training data used as validation set
-  value: 0.1
+  value: 0.2
 patience:
   desc: number of epochs used for early stopping (0 to disable early stopping)
-  value: 0
+  value: 200
 weight_decay:
   desc: L2 penalty to impose on the weights for regularisation
-  value: 0.01
+  value: 0 # 0.01
 dropout:
   desc: probability of a neuron input being zeroed during training for regularisation
-  value: 0.25
+  value: 0 # 0.25
