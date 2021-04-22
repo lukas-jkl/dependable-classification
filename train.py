@@ -140,7 +140,9 @@ def main():
     print(model)
 
     device = torch.device("cpu")
-    criterion = nn.BCEWithLogitsLoss().to(device) # TODO maybe try weights
+    num_pos = torch.sum(train_dataset[:][1])
+    pos_weight = (len(train_dataset) - num_pos) / num_pos
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight).to(device)
 
     # Train (or load cached)
     if config.cache_model_name:
