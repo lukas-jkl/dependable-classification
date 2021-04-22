@@ -28,14 +28,14 @@ def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
             pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
             acc += torch.sum(pred_class.squeeze() == target)
             loss += len(data) * criterion(output, target.unsqueeze(dim=1).float()).item()
-            f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0))
+            f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0, average='macro'))
 
     return (acc / len(data_loader.dataset)), loss / len(data_loader.dataset), np.mean(f1_s)
 
 
-def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion, optimizer) -> Tuple[float, float]:
+def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion, optimizer) -> Tuple[float, float, float]:
     loss, acc = 0, 0
-    
+    f1_s = []
     model.train()
     model.to(device)
 
@@ -50,12 +50,13 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
         pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
         acc += torch.sum(pred_class.squeeze() == target)
         loss += len(data) * loss.item()
+        f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0, average='macro'))
 
         # compute the gradient
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-    return (acc / len(train_loader.dataset)), loss / len(train_loader.dataset)
+    return (acc / len(train_loader.dataset)), loss / len(train_loader.dataset), np.mean(f1_s)
 
 
 def train_model(model, criterion, device, train_loader, val_loader, patience=0):
@@ -64,15 +65,15 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
 
     pbar = tqdm(range(config.epochs))
-    train_accuracy, train_loss = 0, 0
+    train_accuracy, train_loss, train_f1 = 0, 0, 0
     val_accuracy, val_loss, val_f1 = 0, 0, 0
     min_val_loss = None
     num_epochs_no_improvement = 0
     for epoch in pbar:
         pbar.set_description(
-            "(Loss: {:.6f}, Accuracy: {:.4f}, Val_Loss: {:.6f}, Val_Acc: {:.4f}, Val_F1: {:.4f}) - Progress: ".format(
-                train_loss, train_accuracy, val_loss, val_accuracy, val_f1))
-        train_accuracy, train_loss = train(model, device, train_loader, criterion, optimizer)
+            "(Loss: {:.6f}, Accuracy: {:.4f}, F1: {:.4f}, Val_Loss: {:.6f}, Val_Acc: {:.4f}, Val_F1: {:.4f}) - Progress: ".format(
+                train_loss, train_accuracy, train_f1, val_loss, val_accuracy, val_f1))
+        train_accuracy, train_loss, train_f1 = train(model, device, train_loader, criterion, optimizer)
 
         if len(val_loader.dataset) > 0:
             val_accuracy, val_loss, val_f1 = eval(model, device, val_loader, criterion)
@@ -90,6 +91,7 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
             "epoch": epoch,
             "train_acc": train_accuracy,
             "train_loss": train_loss,
+            "train_f1": val_f1,
             "val_acc": val_accuracy,
             "val_loss": val_loss,
             "val_f1": val_f1
