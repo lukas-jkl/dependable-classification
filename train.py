@@ -91,7 +91,7 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
             "epoch": epoch,
             "train_acc": train_accuracy,
             "train_loss": train_loss,
-            "train_f1": val_f1,
+            "train_f1": train_f1,
             "val_acc": val_accuracy,
             "val_loss": val_loss,
             "val_f1": val_f1
