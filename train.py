@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, ConcatDataset
 from tqdm import tqdm
 import wandb
 import numpy as np
@@ -116,14 +116,20 @@ def evaluate(model, train_loader, val_loader, device):
     val_samples = val_loader.dataset.dataset[val_loader.dataset.indices][1]
     val_table = evaluation.precision_recall_f1_table(val_samples, results_val["predicted_classes"])
 
+    full_dataset = ConcatDataset([train_loader.dataset, val_loader.dataset])
+    full_loader = DataLoader(full_dataset, batch_size=config.batch_size)
+    results_full = evaluation.compute_accs(model, full_loader, config.threshold, config.pert_norm, config.pert_eps, device)
+
     # log it all
     wandb.log({
         "train_prec_recall_f1": wandb.Table(dataframe=train_table),
         "val_prec_recall_f1": wandb.Table(dataframe=val_table),
         "train_acc": results_train["accuracy"],
         "val_acc": results_val["accuracy"],
+        "total_acc": results_full["accuracy"],
         "train_verified_acc": results_train["verified_accuracy"],
         "val_verified_acc": results_val["verified_accuracy"],
+        "total_verified_acc": results_full["verified_accuracy"],
         "train_label_1_prec": train_table[train_table.label == 1].precision.values[0],
         "val_label_1_prec": val_table[val_table.label == 1].precision.values[0]
     })
@@ -135,8 +141,8 @@ def main():
     config.model = 'NN'
 
     train_dataset, val_dataset = data_prep.prepare_data(config.dataset, config.val_split)
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config.batch_size)
-    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=config.batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
+    val_loader = DataLoader(val_dataset, batch_size=config.batch_size)
 
     model = nn_model.create_model(config.num_hidden_layers, config.hidden_dim, config.dropout)
     print(model)
