@@ -7,12 +7,11 @@ import torch
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from sklearn.metrics import precision_recall_fscore_support
 
-def compute_accs(model, data_loader, threshold, pert_norm, pert_eps, device):
+def compute_accs(model, data_loader, pert_norm, pert_eps, device):
     """ Compute prediction/accuracy as well as verified-predictions/verified-accuracy
     
     model: base model
     data_loader: where to load data from
-    threshold: assign class 0 if probability for class 0 is >= threshold
     pert_norm: perturbation norm to use 
     pert_eps: epsilon to use for perturbation norm
     """
@@ -21,6 +20,7 @@ def compute_accs(model, data_loader, threshold, pert_norm, pert_eps, device):
 
     acc = 0
     verified_acc = 0
+    threshold = 0.5
 
     verified_predicted_classes, predicted_classes = [], []
 

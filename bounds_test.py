@@ -13,11 +13,11 @@ class TestBounds(unittest.TestCase):
         config = wandb.config
         
         assert config.cache_model_name is not None, "Cached model must exist to run this test"
-        model = torch.load(config.cache_model_name)
+        model = torch.load(config.cache_model_name).to("cpu")
 
-        dataset, _, _ = data_prep.prepare_data(config.dataset, 1, 0)
+        dataset, _ = data_prep.prepare_data(config.dataset, 0)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size)
-        results = evaluation.compute_accs(model, data_loader, config.threshold, config.pert_norm, config.pert_eps)
+        results = evaluation.compute_accs(model, data_loader, config.pert_norm, config.pert_eps, torch.device("cpu"))
 
         for i, (data, _) in enumerate(tqdm(dataset)):
             verified_label = results["verified_predicted_classes"][i]

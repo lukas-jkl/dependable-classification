@@ -22,9 +22,12 @@ num_hidden_layers:
 hidden_dim:
   desc: Dimension of hidden layers
   value: 128
-threshold:
-  desc: assign class 0 (= green = safety-critical) if its probability is >= threshold
-  value: 0.5
+cost_0_classified_as_1:
+  desc: cost of classifying true sample 0 (green) as label 1 (red)
+  value: 1
+cost_1_classified_as_0:
+  desc: cost of classifying true sample 1 (red) as label 0 (green)
+  value: 1
 pert_norm:
   desc: which p-norm to use for the input perturbation (plots only supported for 2 and inf)
   # value: 2

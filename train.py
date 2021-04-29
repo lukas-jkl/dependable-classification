@@ -10,7 +10,7 @@ from sklearn.metrics import precision_score
 import nn_model, data_prep, evaluation
 
 
-def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, criterion) -> Tuple[float, float, float]:
+def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, imbalance_weight_1, pos_weight) -> Tuple[float, float, float]:
     """ evaluate the model on the given set """
     loss, acc = 0, 0
     f1_s = []
@@ -21,11 +21,14 @@ def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
         for i, (data, target) in enumerate(data_loader):
             data, target = data.to(device).view(data.size(0), -1), target.to(device)
 
+            imbalance_weights = torch.where(target == 1, imbalance_weight_1.to(device), torch.tensor(1.).to(device)).unsqueeze(dim=1)
+            criterion = nn.BCEWithLogitsLoss(weight=imbalance_weights, pos_weight=pos_weight).to(device)
+
             # compute the output
             output = model(data)
 
             # compute the classification error and loss
-            pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
+            pred_class = (torch.sigmoid(output) > 0.5).int()
             acc += torch.sum(pred_class.squeeze() == target)
             loss += len(data) * criterion(output, target.unsqueeze(dim=1).float()).item()
             f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0, average='macro'))
@@ -33,7 +36,7 @@ def eval(model: nn.Sequential, device: torch.device, data_loader: DataLoader, cr
     return (acc / len(data_loader.dataset)), loss / len(data_loader.dataset), np.mean(f1_s)
 
 
-def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, criterion, optimizer) -> Tuple[float, float, float]:
+def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, optimizer, imbalance_weight_1, pos_weight) -> Tuple[float, float, float]:
     loss, acc = 0, 0
     f1_s = []
     model.train()
@@ -42,12 +45,15 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     for data, target in train_loader:
         data, target = data.to(device).view(data.size(0), -1), target.to(device)
 
+        imbalance_weights = torch.where(target == 1, imbalance_weight_1.to(device), torch.tensor(1.).to(device)).unsqueeze(dim=1)
+        criterion = nn.BCEWithLogitsLoss(weight=imbalance_weights, pos_weight=pos_weight).to(device)
+
         # compute the output
         output = model(data)
 
         # compute the classification error and loss
         loss = criterion(output, target.unsqueeze(dim=1).float())
-        pred_class = (torch.sigmoid(output) > wandb.config.threshold).int()
+        pred_class = (torch.sigmoid(output) > 0.5).int()
         acc += torch.sum(pred_class.squeeze() == target)
         loss += len(data) * loss.item()
         f1_s.append(precision_score(target.to("cpu"), pred_class.to("cpu"), zero_division=0, average='macro'))
@@ -59,10 +65,13 @@ def train(model: nn.Sequential, device: torch.device, train_loader: DataLoader, 
     return (acc / len(train_loader.dataset)), loss / len(train_loader.dataset), np.mean(f1_s)
 
 
-def train_model(model, criterion, device, train_loader, val_loader, patience=0):
+def train_model(model, device, train_loader, val_loader, patience=0):
     config = wandb.config
 
     optimizer = torch.optim.Adam(model.parameters(), lr=config.lr, weight_decay=config.weight_decay)
+    num_1 = torch.sum(train_loader.dataset[:][1])
+    imbalance_weight_1 = (len(train_loader.dataset) - num_1) / num_1
+    pos_weight = torch.tensor(wandb.config.cost_1_classified_as_0 / wandb.config.cost_0_classified_as_1)
 
     pbar = tqdm(range(config.epochs))
     train_accuracy, train_loss, train_f1 = 0, 0, 0
@@ -73,10 +82,10 @@ def train_model(model, criterion, device, train_loader, val_loader, patience=0):
         pbar.set_description(
             "(Loss: {:.6f}, Accuracy: {:.4f}, F1: {:.4f}, Val_Loss: {:.6f}, Val_Acc: {:.4f}, Val_F1: {:.4f}) - Progress: ".format(
                 train_loss, train_accuracy, train_f1, val_loss, val_accuracy, val_f1))
-        train_accuracy, train_loss, train_f1 = train(model, device, train_loader, criterion, optimizer)
+        train_accuracy, train_loss, train_f1 = train(model, device, train_loader, optimizer, imbalance_weight_1, pos_weight)
 
         if len(val_loader.dataset) > 0:
-            val_accuracy, val_loss, val_f1 = eval(model, device, val_loader, criterion)
+            val_accuracy, val_loss, val_f1 = eval(model, device, val_loader, imbalance_weight_1, pos_weight)
             if patience:
                 if min_val_loss is None or val_loss < min_val_loss:
                     min_val_loss = val_loss
@@ -103,14 +112,14 @@ def evaluate(model, train_loader, val_loader, device):
     config = wandb.config
 
     # Train results
-    results_train = evaluation.compute_accs(model, train_loader, config.threshold, config.pert_norm, config.pert_eps, device)
+    results_train = evaluation.compute_accs(model, train_loader, config.pert_norm, config.pert_eps, device)
     evaluation.plot_results(results_train["verified_predicted_classes"], results_train["predicted_classes"],
                  train_loader, config.pert_norm, config.pert_eps, "train_results")
     train_samples = train_loader.dataset.dataset[train_loader.dataset.indices][1]
     train_table = evaluation.precision_recall_f1_table(train_samples, results_train["predicted_classes"])
 
     # Validation results
-    results_val = evaluation.compute_accs(model, val_loader, config.threshold, config.pert_norm, config.pert_eps, device)
+    results_val = evaluation.compute_accs(model, val_loader, config.pert_norm, config.pert_eps, device)
     evaluation.plot_results(results_val["verified_predicted_classes"], results_val["predicted_classes"],
                  val_loader, config.pert_norm, config.pert_eps, "val_results")
     val_samples = val_loader.dataset.dataset[val_loader.dataset.indices][1]
@@ -118,7 +127,7 @@ def evaluate(model, train_loader, val_loader, device):
 
     full_dataset = ConcatDataset([train_loader.dataset, val_loader.dataset])
     full_loader = DataLoader(full_dataset, batch_size=config.batch_size)
-    results_full = evaluation.compute_accs(model, full_loader, config.threshold, config.pert_norm, config.pert_eps, device)
+    results_full = evaluation.compute_accs(model, full_loader, config.pert_norm, config.pert_eps, device)
 
     # log it all
     wandb.log({
@@ -148,18 +157,15 @@ def main():
     print(model)
 
     device = torch.device(config.device)
-    num_pos = torch.sum(train_dataset[:][1])
-    pos_weight = (len(train_dataset) - num_pos) / num_pos
-    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight).to(device)
 
     # Train (or load cached)
     if config.cache_model_name:
         try:
             model = torch.load(config.cache_model_name)
         except FileNotFoundError:
-            train_model(model, criterion, device, train_loader, val_loader, config.patience)
+            train_model(model, device, train_loader, val_loader, config.patience)
     else:
-        train_model(model, criterion, device, train_loader, val_loader, config.patience)
+        train_model(model, device, train_loader, val_loader, config.patience)
 
     # Evaluate
     evaluate(model, train_loader, val_loader, device)
