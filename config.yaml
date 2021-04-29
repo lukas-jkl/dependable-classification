@@ -27,14 +27,14 @@ cost_0_classified_as_1:
   value: 1
 cost_1_classified_as_0:
   desc: cost of classifying true sample 1 (red) as label 0 (green)
-  value: 1
+  value: 50
 pert_norm:
   desc: which p-norm to use for the input perturbation (plots only supported for 2 and inf)
-  # value: 2
-  value: .inf
+  # value: .inf
+  value: 2
 pert_eps:
   desc: epsilon for perturbation norm in verified accuracy
-  value: 0.05
+  value: 0.025
 cache_model_name:
   desc: name of cached model (null to disable caching)
   value: null
