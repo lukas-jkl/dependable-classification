@@ -21,6 +21,7 @@ def compute_accs(model, data_loader, pert_norm, pert_eps, device):
     acc = 0
     verified_acc = 0
     threshold = 0.5
+    cost = 0
 
     verified_predicted_classes, predicted_classes = [], []
 
@@ -35,6 +36,10 @@ def compute_accs(model, data_loader, pert_norm, pert_eps, device):
         lb_class = (torch.sigmoid(lb) > threshold).int()
         ub_class = (torch.sigmoid(ub) > threshold).int()
         acc += torch.sum(pred_class.squeeze() == target)
+
+        wrong_pred = pred_class.squeeze() != target
+        cost += torch.sum(wrong_pred & (target == 1)) * wandb.config.cost_1_classified_as_0
+        cost += torch.sum(wrong_pred & (target == 0)) * wandb.config.cost_0_classified_as_1
 
         verified_prediction = pred_class.clone()
         verified_prediction[lb_class != ub_class] = -1
@@ -51,7 +56,9 @@ def compute_accs(model, data_loader, pert_norm, pert_eps, device):
         "accuracy": acc,
         "verified_accuracy": verified_acc,
         "verified_predicted_classes": torch.stack(verified_predicted_classes).to("cpu"),
-        "predicted_classes": torch.stack(predicted_classes).to("cpu")
+        "predicted_classes": torch.stack(predicted_classes).to("cpu"),
+        "total_cost": cost.item(),
+        "cost_per_sample": cost.item() / len(data_loader.dataset)
     }
 
 

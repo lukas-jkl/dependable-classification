@@ -129,19 +129,15 @@ def evaluate(model, train_loader, val_loader, device):
     full_loader = DataLoader(full_dataset, batch_size=config.batch_size)
     results_full = evaluation.compute_accs(model, full_loader, config.pert_norm, config.pert_eps, device)
 
-    # log it all
-    wandb.log({
+    results = {}
+    results.update({"train_" + k: v for k, v in results_train.items()})
+    results.update({"val_" + k: v for k, v in results_val.items()})
+    results.update({"full_" + k: v for k, v in results_full.items()})
+    results.update({
         "train_prec_recall_f1": wandb.Table(dataframe=train_table),
         "val_prec_recall_f1": wandb.Table(dataframe=val_table),
-        "train_acc": results_train["accuracy"],
-        "val_acc": results_val["accuracy"],
-        "total_acc": results_full["accuracy"],
-        "train_verified_acc": results_train["verified_accuracy"],
-        "val_verified_acc": results_val["verified_accuracy"],
-        "total_verified_acc": results_full["verified_accuracy"],
-        "train_label_1_prec": train_table[train_table.label == 1].precision.values[0],
-        "val_label_1_prec": val_table[val_table.label == 1].precision.values[0]
     })
+    wandb.log(results)
 
 
 def main():
