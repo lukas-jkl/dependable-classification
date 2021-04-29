@@ -5,7 +5,9 @@ model.torch
 __pycache__
 src
 report.pdf
-
+venv/*
+sweep_configs/*
+auto_LiRPA/*
 
 ### LaTeX ###
 .texpadtmp
