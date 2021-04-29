@@ -85,18 +85,18 @@ def plot_results(verified_predictions, predictions, data_loader, pert_norm, epsi
     fig, ax = plt.subplots(figsize=(12, 12))
     plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="green", label="0", s=10, zorder=10)
     plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="red", label="1", s=10, zorder=10)
-    plt.scatter(data[label_0 & np.invert(correct).bool()][:, 0], data[label_0 & np.invert(correct).bool()][:, 1], c="limegreen",
+    plt.scatter(data[label_0 & np.invert(correct).bool()][:, 0], data[label_0 & np.invert(correct).bool()][:, 1], c="darkred",
                 label="0 (true: 1)", s=20, marker='x', zorder=15)
-    plt.scatter(data[label_1 & np.invert(correct).bool()][:, 0], data[label_1 & np.invert(correct).bool()][:, 1], c="darkred",
+    plt.scatter(data[label_1 & np.invert(correct).bool()][:, 0], data[label_1 & np.invert(correct).bool()][:, 1], c="limegreen",
                 label="1 (true: 0)", s=20, marker='x', zorder=15)
 
     for idx, c in zip([verified_label_0, verified_label_1], ["green", "red"]):
         points = data[idx]
         for i in range(len(points)):
             if pert_norm == 2:
-                patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.05, zorder=0)
+                patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
             elif pert_norm == np.inf:
-                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon, width=epsilon, color=c, fill=True, alpha=0.05, zorder=0)
+                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon, width=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
             else:
                 raise RuntimeError(f"{pert_norm}-norm not supported for plotting")
             ax.add_patch(patch)
