@@ -119,7 +119,7 @@ Thus, while we employ the same general approach for all three data sets, we tune
 \end{figure}
 
 
-\section{Possible Solutions and Related Work}
+\section{Possible Solutions and Related Work} \label{sec:relatedWork}
 
 Before choosing an approach, we analysed the core aspect of safety guarantees and possible assumptions. In particular, we looked at two possibilities of formulating guarantees for our problem: (a) expressing uncertainty for a given sample and (b) robustness against local perturbations. 
 
@@ -273,31 +273,13 @@ For data set C we used two hidden layers with 256 neurons and a learning rate of
 
 
 \section{Discussion}
-In this work we have proposed a solution for estimating the dependability of neural networks. 
+In this work, we have proposed a solution for estimating the dependability of neural networks and give safety guarantees for local robustness in a classification setting.
 
-\subsection{Advantages of this Approach}
+While we only applied our approach to simple two-dimensional input data, it can easily be \textbf{scaled to higher dimensions} by using more complex models. This is also possible because bounds can be computed rather quickly as compared to the exact methods for finding bounds described in Section \ref{sec:relatedWork}. Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the library we used, AutoLiRPA~\cite{xu2020autoLiRPA}, can also be used for more complex architectures such as convolutional networks, recurrent neural networks, or transformers and thereby verify results for state-of-the-art models for challenging problems in, for example, computer vision.
 
-\subsubsection{Scaling to Higher Dimensions and different Domains}
-While we only applied our approach to simple two-dimensional input data, it can easily be scaled to higher dimensions. This is also possible because bounds can be computed rather quickly. 
-Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the used library AutoLiRPA~\cite{xu2020autoLiRPA} can also be applied to more complex architectures such as convolutional networks, recurrent neural networks, or transformers. 
+The main limitations of our approach lie in the necessary assumptions. Mainly the requirement of correctly labelled input data as well as the assumption of new samples lying within the $\epsilon$-neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}, need to be considered. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple datasets, other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
 
-
-\subsection{Limitations}
-The main limitations of our approach are the required assumptions. Mainly the requirement of correctly labeled input data as well as the assumption of new samples lying within the $\epsilon $neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}, need to be considered. While for these simple datasets, other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other more complex domains.
-%TODO
-% An outline how the approach could be scaled to higher dimensions
-
-%- quick summary of our method (this is the conclusion!)
-%
-%- Advantages
-%  - scaling to higher dimensions (esp. images, transformer)
-%    - complex architectures
-%  - high predictive capabilities
-%  - verifications for perturbations
-%  - very performant compared to exact perturbation methods (e.g. Reluplex)
-%- Limitations
-%  - assumptions have to be made
-%  - compared to simple models, more resource-intense to train (but that's the price you have to pay for good results 😎)
+We, hence, believe that our model strikes a good balance in this spectrum of demanding requirements.  % TODO write nicer
 
 
 \pagebreak  
