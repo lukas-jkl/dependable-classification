@@ -157,7 +157,22 @@ To warrant the use of a complex deep neural network, we made sure that it exceed
 %• A description of the employed ML approach
 %• All assumptions made, including an exhaustive proposal/justification for their validation
 
-The model we use is a deep neural network implemented in PyTorch. It receives as input a 2D training sample, processes it through several hidden layers with ReLU activations and finally outputs a single scalar, activated through the sigmoid function. If the output is smaller than 0.5, class 0 is assigned, class 1 otherwise. We use double weighted binary cross-entropy as our loss function:
+
+We model the safety criticality of our classifier's decisions using a cost matrix illustrated in Table~\ref{tab:cost_matrix}. Correctly classifying a sample obviously does not incur any cost, i.e. $c_{0,0} = c_{1,1} = 0$. In our particular example, assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_{1,0}$ should greatly exceed the cost $c_{0,1}$ of assigning the label $1$ (red) to true label $0$. Concrete values for $c_{0,1}$ and $c_{1,0}$ can be set by the users of our approach. The algorithm then minimises the total cost.
+
+\begin{table}
+  \begin{tabular}{|l|c|c|c|}\hline
+    \backslashbox{True}{Predicted} & \makebox[3em]{0 (green)} & \makebox[3em]{1 (red)} \\ \hline
+    0 (green) & $c_{0,0} = 0$ & $c_{0,1}$ \\ \hline
+    1 (red) & $c_{1,0}$ & $c_{1,1} = 0$ \\\hline
+  \end{tabular}
+  \caption{Cost matrix for classifications}
+  \label{tab:cost_matrix}
+\end{table}
+
+\subsection{Model} \label{ssec:model}
+
+The model we use is a deep neural network implemented in PyTorch. It receives as input a 2D training sample, processes it through several hidden layers with ReLU activations and finally outputs a single scalar, activated through the sigmoid function $\sigma(a_i)$. If the output is smaller than 0.5, class 0 is assigned, class 1 otherwise. We use double weighted binary cross-entropy as our loss function:
 \begin{equation}
 	l_i = -w_{i}[py_{i} \log \sigma(a_i) + (1-y_i)\log(1-\sigma(a_i))]
 \end{equation} 
@@ -170,60 +185,53 @@ w_i = \begin{cases}
 \end{cases}
 \end{equation}
 
-This will cause the training samples of the underrepresented class to be weighted higher and thereby offset the imbalance. Additionally to that, we also use weight $p$ to account for the costs of misclassification that differ per class. % TODO Patrick: Make link to classification cost section.
+This will cause the training samples of the underrepresented class to be weighted higher and thereby offset the imbalance. Additionally to that, we set the weight for positive examples $p = \frac{c_{1,0}}{c_{0,1}}$ to account for the costs of misclassification that differ per class. 
 
 We train the model using Adam with learning rates around 0.0001 and a batch size of 32. % TODO still true?
 To pick the best hyper-parameters, we use a validation set consisting of 20\% of all samples. The remaining 80\% of samples are used for training. Using the validation set, we can later also demonstrate our generalisation capabilities and ensure that we are not overfitting on the training set. 
 
 \subsection{Verification} \label{ssec:verification}
 
-Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible (infinitely many) samples that lie within this ball $\{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support $L_2$ and $L_\infty$-norm.
+Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified. % TODO Let's talk about this sentence once more please.
+We call this metric \textit{verified accuracy}. 
 
-Under the assumption that any new unseen data point lies within the defined neighbourhood of an existing training sample, we can give a probability that this new data point will be correctly classified based on the fraction of training samples that are \textit{verified}. We call this \textit{verified accuracy}.
+% TODO do we need some more justification for our use of the term "verified accuracy"? Prove it somehow or refer to another paper?
+% TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
+
+The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. To do so, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
+
+% TODO should we explain how autoLiRPA works a bit more?
 
 \section{Experiments}
 %TODO
 % For each data set, an upper bound for the misclassification error, including its justification
 
+% TODO write some generic stuff about our experiments. Exact model architecture?
+% TODO W&B reference?
+
 \subsection{Metrics}
-In our experiments we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety related cost associated with misclassification.
+In our experiments, we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety-related cost associated with misclassification.
 
+\begin{itemize}
+	\item \textbf{Precision, Recall, F1}: For imbalanced models, precision, recall, F1 score are commonly used to compare the performance of classification models. They help capturing the trade-off between true-positive and false-positive predictions. 
+	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
+	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model.
+\end{itemize}
 
-\subsubsection{Precision, Recall, F1}
-Precision, Recall and F1 are commonly used to compare the performance of classification models. And help to capture the trade-off between true-positive and false-positive predictions. 
-
-
-\subsubsection{Classification Cost}
-We can model the safety criticality of decisions from our classifier based on a cost matrix as illustrated in Table~\ref{tab:cost_matrix}. In our particular example assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_{1,0}$ should greatly exceed the cost $c_{1,1}$ of assigning the label $1$ (red) to true label $0$. In our evaluation we capture this in the metric \textit{classification cost} which is the sum over all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
-
-\begin{table}[H]
-  \begin{tabular}{|l|c|c|c|}\hline
-    \backslashbox{True}{Predicted} & \makebox[3em]{0 (green)} & \makebox[3em]{1 (red)} \\ \hline
-    0 (green) & $c_{0,0} = 0$ & $c_{0,1}$ \\ \hline
-    1 (red) & $c_{1,0}$ & $c_{1,1} = 0$ \\\hline
-  \end{tabular}
-  \caption{Cost matrix}
-  \label{tab:cost_matrix}
-\end{table}
-
-
-
-\subsubsection{Verified Accuracy}
-The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model.
+In the end, we optimise our model for minimal classification cost. Depending on the $\epsilon$ chosen by the user, we achieve varying \textit{verified accuracies}.
 
 \subsection{Architecture Search}
 Due to the simplicity of the data sets we only use simple multilayer perceptron (MLP) architectures. We experiment with between one and three hidden layers and different number of neurons as well as regularization techniques such as weight decay and dropout regularization. To perform the architecture search we use the metric classification cost per sample, this metric helps us find a suitable model with respect to our security metrics. We utilize Weights \& Biases \cite{wandb} for tracking our experiments and for visualizing the results. 
 
-\subsubsection{Generalization}
+\subsubsection*{Generalization}
 A big problem for neural networks is overfitting. That is the network will end up fitting the training data very well, but will fail to generalize to new unseen data. To prevent this we use 20\% of the given data as validation data set. During training we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 
 \subsection{Results}
 
-\subsubsection{Data Set a}
+\subsubsection*{Data Set a}
 
-\subsubsection{Data Set b}
-
+\subsubsection*{Data Set b}
 
 \begin{table}[]
   \resizebox{\textwidth}{!}{
@@ -241,7 +249,7 @@ A big problem for neural networks is overfitting. That is the network will end u
   \end{tabular}}
   \end{table}
 
-\subsubsection{Data Set c}
+\subsubsection*{Data Set c}
 
 
 \section{Discussion}
