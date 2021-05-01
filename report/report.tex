@@ -18,8 +18,6 @@
   \providecommand\BibTeX{{%
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
 
-% TODO is our font size no less than 10px?
-
 \begin{document}
 
 %\begin{titlepage}
@@ -28,7 +26,7 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{AI Dependability Assessment} % TODO find a good title
+\title{Verified Classification using Deep Neural Networks with Perturbation Analysis}
 
 %%
 %% The "author" command and its associated commands are used to define
@@ -43,6 +41,12 @@
 \author{Lukas Timpl}
 \email{lukas.timpl@student.tugraz.at}
 
+% TODO check whether we fulfil all these criteria:
+% - Is the description of the approach complete and comprehensive?
+% - Are there justifications or proposals for validation of the assumptions?
+% - Is there a justification for the upper bound of the misclassification error?
+% - Is the upper bound appropriate for safety applications?
+% - Is there an outline how the approach would scale to higher dimensions?
 
 %%
 %% The abstract is a short summary of the work to be presented in the
@@ -91,9 +95,7 @@ Fig. \ref{fig:datasets} shows the three data sets of the challenge. Before we st
 	\item \textbf{Separability}: It is easy to see that data set B can be separated by drawing a simple sine-like wave across the two dimensions and data set B by using multiple ellipses. For data set A, however, it is harder to make out a clear trend. There are several cases where green and red samples are very close to each other, and accurately separating classes will prove difficult.
 \end{enumerate}
 
-Thus, while we employ the same general approach for all three data sets, we tune our hyper-parameters separately to obtain ideal performance. We use simpler models for smaller data sets to prevent overfitting and counter class imbalance by using a weighted loss, as detailed in Section \ref{sec:approach}. % TODO really true that we use simpler model for data set A?
-
-% TODO exchange colours for classes in plots
+Thus, while we employ the same general approach for all three data sets, we tune our hyper-parameters separately to obtain ideal performance.
 
 \begin{figure}
 \centering
@@ -145,7 +147,7 @@ To warrant the use of a complex deep neural network, we made sure that it exceed
 \multicolumn{1}{l|}{}                                 & \textbf{Model}    & \textit{LR} & \textit{NB} & \textit{SVM} & \textit{GB}   & \textit{LR} & \textit{NB} & \textit{SVM} & \textit{GB}    & \textit{LR} & \textit{NB} & \textit{SVM} & \textit{GB}   \\ \hline
 \multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Train}}} & Acc.              & 0.67        & 0.77        & 0.87         & \textbf{0.96} & 0.85        & 0.85        & 0.89         & \textbf{0.996} & 0.91        & 0.91        & 0.91         & \textbf{0.96} \\ \cline{2-14} 
 \multicolumn{1}{|c|}{}                                & F1                & 0.81        & 0.73        & 0.87         & \textbf{0.96} & 0.85        & 0.85        & 0.89         & \textbf{0.996} & 0.95        & 0.95        & 0.95         & \textbf{0.96} \\ \hline
-\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Val}}}   & Acc.              & 0.67        & 0.75        & 0.84         & \textbf{0.92} & 0.88        & 0.88        & 0.90         & \textbf{0.984} & 0.91        & 0.91        & 0.91         & \textbf{0.96} \\ \cline{2-14} 
+\multicolumn{1}{|c|}{\multirow{2}{*}{\textbf{Val.}}}   & Acc.              & 0.67        & 0.75        & 0.84         & \textbf{0.92} & 0.88        & 0.88        & 0.90         & \textbf{0.984} & 0.91        & 0.91        & 0.91         & \textbf{0.96} \\ \cline{2-14} 
 \multicolumn{1}{|c|}{}                                & F1                & 0.80        & 0.71        & 0.83         & \textbf{0.92} & 0.88        & 0.88        & 0.90         & \textbf{0.984} & 0.95        & 0.95        & 0.95         & \textbf{0.96} \\ \hline
 \end{tabular}}
 \caption{Results of baseline models}
@@ -187,15 +189,11 @@ w_i = \begin{cases}
 
 This will cause the training samples of the underrepresented class to be weighted higher and thereby offset the imbalance. Additionally to that, we set the weight for positive examples $p = \frac{c_{1,0}}{c_{0,1}}$ to account for the costs of misclassification that differ per class. 
 
-We train the model using Adam with learning rates around 0.0001 and a batch size of 32. % TODO still true?
-To pick the best hyper-parameters, we use a validation set consisting of 20\% of all samples. The remaining 80\% of samples are used for training. Using the validation set, we can later also demonstrate our generalisation capabilities and ensure that we are not overfitting on the training set. 
-
 \subsection{Verification} \label{ssec:verification}
 
-Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified. % TODO Let's talk about this sentence once more please.
-We call this metric \textit{verified accuracy}. 
+Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified. % TODO maybe explain a bit more (conditional probability?) - elaborate with p(...)
+We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}.
 
-% TODO do we need some more justification for our use of the term "verified accuracy"? Prove it somehow or refer to another paper?
 % TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
 
 The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. To do so, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
@@ -207,7 +205,6 @@ The challenging aspect of this verification is to show for all data points $\mat
 % For each data set, an upper bound for the misclassification error, including its justification
 
 % TODO write some generic stuff about our experiments. Exact model architecture?
-% TODO W&B reference?
 
 \subsection{Metrics}
 In our experiments, we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety-related cost associated with misclassification.
@@ -215,16 +212,17 @@ In our experiments, we use a variety of different metrics, which allow us to com
 \begin{itemize}
 	\item \textbf{Precision, Recall, F1}: For imbalanced models, precision, recall, F1 score are commonly used to compare the performance of classification models. They help capturing the trade-off between true-positive and false-positive predictions. 
 	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
-	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model.
+	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} = \text{acc}$.
 \end{itemize}
 
 In the end, we optimise our model for minimal classification cost. Depending on the $\epsilon$ chosen by the user, we achieve varying \textit{verified accuracies}.
 
 \subsection{Architecture Search}
-Due to the simplicity of the data sets we only use simple multilayer perceptron (MLP) architectures. We experiment with between one and three hidden layers and different number of neurons as well as regularization techniques such as weight decay and dropout regularization. To perform the architecture search we use the metric classification cost per sample, this metric helps us find a suitable model with respect to our security metrics. We utilize Weights \& Biases \cite{wandb} for tracking our experiments and for visualizing the results. 
+Due to the simplicity of the data sets, we only use simple multilayer perceptron (MLP) architectures. We experiment with between 1 and 4 hidden layers and different numbers of neurons as well as regularisation techniques such as weight decay and dropout regularisation. We train the model using Adam with a batch size of 32 and varying learning rates. To perform the architecture search, we use the metric classification cost per sample. This metric helps us find a suitable model with respect to our security metrics. We utilise Weights \& Biases \cite{wandb} for tracking our experiments and for visualising the results. 
+
 
 \subsubsection*{Generalization}
-A big problem for neural networks is overfitting. That is the network will end up fitting the training data very well, but will fail to generalize to new unseen data. To prevent this we use 20\% of the given data as validation data set. During training we monitor the validation loss and use early stopping to prevent the network from overfitting. 
+A big problem for neural networks is overfitting. That is the network will end up fitting the training data very well, but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 
 \subsection{Results}
