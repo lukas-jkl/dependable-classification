@@ -273,6 +273,17 @@ For data set C we used two hidden layers with 256 neurons and a learning rate of
 
 
 \section{Discussion}
+In this work we have proposed a solution for estimating the dependability of neural networks. 
+
+\subsection{Advantages of this Approach}
+
+\subsubsection{Scaling to Higher Dimensions and different Domains}
+While we only applied our approach to simple two-dimensional input data, it can easily be scaled to higher dimensions. This is also possible because bounds can be computed rather quickly. 
+Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the used library AutoLiRPA~\cite{xu2020autoLiRPA} can also be applied to more complex architectures such as convolutional networks, recurrent neural networks, or transformers. 
+
+
+\subsection{Limitations}
+The main limitations of our approach are the required assumptions. Mainly the requirement of correctly labeled input data as well as the assumption of new samples lying within the $\epsilon $neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}, need to be considered. While for these simple datasets, other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other more complex domains.
 %TODO
 % An outline how the approach could be scaled to higher dimensions
 
