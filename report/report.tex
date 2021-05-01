@@ -139,8 +139,6 @@ Finally, we arrive at deep neural networks, which have received much attention i
 %TODO
 %• A description of the employed ML approach
 %• All assumptions made, including an exhaustive proposal/justification for their validation
-~\cite{xu2020automatic}
-
 
 
 Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible (infinitely many) samples that lie within this ball $\{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support $L_2$ and $L_\infty$-norm.
