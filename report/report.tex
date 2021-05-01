@@ -211,6 +211,7 @@ In our experiments, we use a variety of different metrics, which allow us to com
 
 \begin{itemize}
 	\item \textbf{Precision, Recall, F1}: For imbalanced models, precision, recall, F1 score are commonly used to compare the performance of classification models. They help capturing the trade-off between true-positive and false-positive predictions. 
+	%TODO: write how F1 is defined
 	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
 	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} = \text{acc}$.
 \end{itemize}
