@@ -105,11 +105,18 @@ def train_model(model, device, train_loader, val_loader, patience=0):
             "val_loss": val_loss,
             "val_f1": val_f1
         })
-    torch.save(model, "model.torch")
+
+    model_path = "model.torch"
+    torch.save(model.to("cpu"), model_path)
+    artifact = wandb.Artifact('model', type='model')
+    artifact.add_file(model_path)
+    wandb.log_artifact(artifact)
+
 
 
 def evaluate(model, train_loader, val_loader, device):
     config = wandb.config
+    model.to(device)
 
     # Train results
     results_train = evaluation.compute_accs(model, train_loader, config.pert_norm, config.pert_eps, device)
