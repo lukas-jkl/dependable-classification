@@ -123,7 +123,7 @@ Before choosing an approach, we analysed the core aspect of safety guarantees an
 
 The former addresses the problem that most machine learning approaches always produce an answer, even if they encounter inputs the like of which they have never seen before. In that case, they should be highly unsure about their prediction but mostly fail to express that. One way to counter this are Bayesian Neural Networks (BNNs) \cite{goan2020bnn}. In a probabilistic manner, they place a distribution over the network parameters. They can, hence, express their uncertainty in case they see challenging inputs. This could be very useful in a security-critical environment and would, for instance, allow an autonomous vehicle to alert its driver if it is unable to deal with a particular situation. However, it does not strictly correspond to the challenge description where security guarantees for \textit{unseen} inputs should be made. A BNN would require a concrete input $\mathbf{x}_i$ to express its certainty.
 
-Therefore, we to decided pursue the goal of (b), meaning that we made our model robust against local perturbations. Simply put, this means that the model should reliably label unseen samples that lie near known training samples with the same class as the known sample. We put forward a more formal definition in Section \ref{sec:approach}. 
+Therefore, we to decided pursue the goal of (b), meaning that we made our model robust against local perturbations. Simply put, this means that the model should reliably label unseen samples that lie near known training samples with the same class as the known sample. We put forward a more formal definition in Subsection \ref{ssec:verification}. 
 
 It is trivial to give such guarantees for simple models: For logistic regression and k-nearest-neighbours, the decision boundary can be used to derive them. For naive Bayes classifiers, confidence intervals can be directly computed. Some of these classifiers would also perform relatively well on the given data sets, which is why we use them as baselines for our final model (see Subsection \ref{ssec:baselines}). However, they would not scale well to higher dimensions and more complex problems. 
 
@@ -157,6 +157,25 @@ To warrant the use of a complex deep neural network, we made sure that it exceed
 %• A description of the employed ML approach
 %• All assumptions made, including an exhaustive proposal/justification for their validation
 
+The model we use is a deep neural network implemented in PyTorch. It receives as input a 2D training sample, processes it through several hidden layers with ReLU activations and finally outputs a single scalar, activated through the sigmoid function. If the output is smaller than 0.5, class 0 is assigned, class 1 otherwise. We use double weighted binary cross-entropy as our loss function:
+\begin{equation}
+	l_i = -w_{i}[py_{i} \log \sigma(a_i) + (1-y_i)\log(1-\sigma(a_i))]
+\end{equation} 
+
+where $l_i$ is the loss for sample $i$, $a_i$ is the output of the neural network before activated in sigmoid and $y_i$ is the correct label. To counter class imbalance, we set
+\begin{equation}
+w_i = \begin{cases}
+\frac{\text{\# class 0 samples}}{\text{\# class 1 samples}} & y_i = 1\\
+1 & y_i = 0.
+\end{cases}
+\end{equation}
+
+This will cause the training samples of the underrepresented class to be weighted higher and thereby offset the imbalance. Additionally to that, we also use weight $p$ to account for the costs of misclassification that differ per class. % TODO Patrick: Make link to classification cost section.
+
+We train the model using Adam with learning rates around 0.0001 and a batch size of 32. % TODO still true?
+To pick the best hyper-parameters, we use a validation set consisting of 20\% of all samples. The remaining 80\% of samples are used for training. Using the validation set, we can later also demonstrate our generalisation capabilities and ensure that we are not overfitting on the training set. 
+
+\subsection{Verification} \label{ssec:verification}
 
 Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible (infinitely many) samples that lie within this ball $\{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support $L_2$ and $L_\infty$-norm.
 
