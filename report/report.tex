@@ -8,6 +8,8 @@
 \usepackage{tabularx}
 \usepackage{graphicx}
 \usepackage{caption}
+\usepackage{multirow}
+\usepackage{slashbox}
 
 
 %%
@@ -121,7 +123,7 @@ Before choosing an approach, we analysed the core aspect of safety guarantees an
 
 The former addresses the problem that most machine learning approaches always produce an answer, even if they encounter inputs the like of which they have never seen before. In that case, they should be highly unsure about their prediction but mostly fail to express that. One way to counter this are Bayesian Neural Networks (BNNs) \cite{goan2020bnn}. In a probabilistic approach, they place a distribution over the network parameters. They can, hence, express their uncertainty in case they see challenging inputs. This could be very useful in a security-critical environment and would, for instance, allow an autonomous vehicle to alert its driver if it is unable to deal with a particular situation. However, it does not strictly correspond to the challenge description where security guarantees for unseen inputs should be made. A BNN would require a concrete input $\mathbf{x}_i$ to express its certainty.
 
-Therefore, we to decided pursue the goal of (b), meaning that we made our model robust against local perturbations. Simply put, this means that the model should reliably label unseen samples that lie near known training samples with the same class as the known sample. We put forward a more formal definition in Section \ref{sec:approach}. It is trivial to give such guarantees for simple models: For logistic regression and k-nearest-neighbours, the decision boundary can be used to derive them. For naive Bayes classifiers, confidence intervals can be directly computed. Some of these classifiers would also produce relatively well on the given datasets, which is why we use them as baselines for our final model (see Subsection \ref{ssec:baselines}). However, they would not scale well to higher dimensions and more complex problems. 
+Therefore, we to decided pursue the goal of (b), meaning that we made our model robust against local perturbations. Simply put, this means that the model should reliably label unseen samples that lie near known training samples with the same class as the known sample. We put forward a more formal definition in Section \ref{sec:approach}. It is trivial to give such guarantees for simple models: For logistic regression and k-nearest-neighbours, the decision boundary can be used to derive them. For naive Bayes classifiers, confidence intervals can be directly computed. Some of these classifiers would also produce relatively well on the given data sets, which is why we use them as baselines for our final model (see Subsection \ref{ssec:baselines}). However, they would not scale well to higher dimensions and more complex problems. 
 
 More complicated models include SVM and Gaussian Processes (GP) for classification. SVM can be powerful, especially with RBF kernels, but cannot provide the guarantees we require. GP would provide us with empirical confidence intervals but becomes inefficient in higher dimensions. Furthermore, both approaches are not leading in state-of-the-art predictive capabilities for challenging tasks, especially in the vision domain.
 
@@ -150,18 +152,55 @@ Under the assumption that any new unseen data point lies within the defined neig
 % For each data set, an upper bound for the misclassification error, including its justification
 
 \subsection{Metrics}
+In our experiments we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety related cost associated with misclassification.
+
+\subsubsection{Classification Cost}
+%TODO: fix
+We can model the safety criticality of decisions from our classifier based on a cost matrix as illustrated in Table~\ref{tab:cost_matrix}. In our particular example assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_1$ should greatly exceed the cost $c_0$ of assigning the label $1$ (red) to true label $0$. In our evaluation we capture this in the metric \textit{classification cost} which is the sum over all misclassifications and their associated cost. 
+
+\begin{table}[H]
+  \begin{tabular}{|l|c|c|c|}\hline
+    \backslashbox{True}{Predicted} & \makebox[3em]{0 (green)} & \makebox[3em]{1 (red)} \\ \hline
+    0 (green) & $c_{0,0} = 0$ & $c_{0,1}$ \\ \hline
+    1 (red) & $c_{1,0}$ & $c_{1,1} = 0$ \\\hline
+  \end{tabular}
+  \caption{Cost matrix}
+  \label{tab:cost_matrix}
+\end{table}
+
+\subsection{Verified Accuracy}
+
+
+\subsection{Precision, Recall, F1}
+
 
 \subsection{Results}
+
+\subsubsection{data set a}
+
+\subsubsection{data set b}
+
+\subsubsection{data set c}
+
 We used Weights \& Biases \cite{wandb} for experiment tracking and visualisations.
 
 
-\section{Scaling to higher dimensions}
+\section{Discussion}
 %TODO
 % An outline how the approach could be scaled to higher dimensions
 
-\section{Appendix}
-%TODO
-% In an appendix, the documented code should be supplied
+%- quick summary of our method (this is the conclusion!)
+%
+%- Advantages
+%  - scaling to higher dimensions (esp. images, transformer)
+%    - complex architectures
+%  - high predictive capabilities
+%  - verifications for perturbations
+%  - very performant compared to exact perturbation methods (e.g. Reluplex)
+%- Limitations
+%  - assumptions have to be made
+%  - compared to simple models, more resource-intense to train (but that's the price you have to pay for good results 😎)
+
 
 \pagebreak  
 
