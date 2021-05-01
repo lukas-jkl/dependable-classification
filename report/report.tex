@@ -142,7 +142,10 @@ Finally, we arrive at deep neural networks, which have received much attention i
 ~\cite{xu2020automatic}
 
 
+
 Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible (infinitely many) samples that lie within this ball $\{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support $L_2$ and $L_\infty$-norm.
+
+Under the assumption that any new unseen data point lies within the defined neighbourhood of an existing training sample, we can give a probability that this new data point will be correctly classified based on the fraction of training samples that are \textit{verified}. We call this \textit{verified accuracy}.
 
 \section{Experiments}
 %TODO
