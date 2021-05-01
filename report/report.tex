@@ -16,6 +16,7 @@
   \providecommand\BibTeX{{%
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
 
+% TODO is our font size no less than 10px?
 
 \begin{document}
 
@@ -72,11 +73,11 @@
 
 \section{Introduction}
 
-This is a submission to the \textit{Siemens AI Dependability Assessment}\footnote{\url{https://ecosystem.siemens.com/ai-da-sc}}. The challenge task was to solve a 2D binary classification problem, i.e. a binary function $f(\mathbf{x})$ classifies a data point $\mathbf{x_i} = (x_i^1, x_i^2)$ as either $l_i=0$ (green) or $l_i=1$ (red). With only two dimensions, the data sets are rather simple, yet the approach should also scale to inputs of higher dimensions. Most importantly, however, $f(\mathbf{x})$ should provide safety guarantees. This means that the ML model must not only have high predictive capabilities but also be capable of producing provably reliable results under certain assumptions. Furthermore, the setting is chosen such that misclassification costs are not equal for the two classes. Following the analogy of traffic lights, it is more dangerous (costly) to classify a red sample as green than classifying a green sample as red.  
+This is a submission to the \textit{Siemens AI Dependability Assessment}\footnote{\url{https://ecosystem.siemens.com/ai-da-sc}}. The challenge task was to solve a 2D binary classification problem, i.e. a binary function $f(\mathbf{x})$ classifies a data point $\mathbf{x_i} = (x_i^1, x_i^2)$ as either $l_i=0$ (green) or $l_i=1$ (red). With only two dimensions, the data sets are rather simple, yet the approach should also scale to inputs of higher dimensions. Most importantly, however, $f(\mathbf{x})$ should provide safety guarantees. This means that the ML model must not only have high predictive capabilities but also be capable of producing provably reliable results under certain assumptions. Furthermore, the setting is chosen such that misclassification costs are not equal for the two classes. Following the analogy of traffic lights, it is more dangerous (costly) to classify a red sample as green than classifying a green sample as red. It is given that the training data is labelled correctly and that the classes do not overlap.  
 
 Our solution aims at striking the ideal balance of these criteria in that it displays high predictive performance, gives provable safety guarantees, scales well to more complex data sets, and lets domain experts dynamically configure the class-wise cost of misclassification.
 
-The architecture we chose is a deep neural network trained with cost-weighted binary cross-entropy loss. The safety guarantees follow the assumption of reliable training inputs. Using Linear Relaxation Based Perturbation Analysis (LiRPA), we can guarantee stable predictions in the epsilon neighbourhood of previously seen samples.
+The architecture we chose is a deep neural network trained with cost-weighted binary cross-entropy loss. The safety guarantees follow the assumption of reliable training inputs. Using Linear Relaxation Based Perturbation Analysis (LiRPA), we can guarantee stable predictions in the $\epsilon$-neighbourhood of previously seen samples.
 
 \subsection{Data sets}
 
@@ -89,6 +90,8 @@ Fig. \ref{fig:datasets} shows the three data sets of the challenge. Before we st
 \end{enumerate}
 
 Thus, while we employ the same general approach for all three data sets, we tune our hyper-parameters separately to obtain ideal performance. We use simpler models for smaller data sets to prevent overfitting and counter class imbalance by using a weighted loss, as detailed in Section \ref{sec:approach}. % TODO really true that we use simpler model for data set A?
+
+% TODO exchange colours for classes in plots
 
 \begin{figure}
 \centering
@@ -113,7 +116,24 @@ Thus, while we employ the same general approach for all three data sets, we tune
 
 
 \section{Possible Solutions and Related Work}
-% - possible approaches + related work
+
+Before choosing an approach, we analysed the core aspect of safety guarantees and possible assumptions. In particular, we looked at two possibilities of formulating guarantees for our problem: (a) expressing uncertainty for a given sample and (b) robustness against local perturbations. 
+
+The former addresses the problem that most machine learning approaches always produce an answer, even if they encounter inputs the like of which they have never seen before. In that case, they should be highly unsure about their prediction but mostly fail to express that. One way to counter this are Bayesian Neural Networks (BNNs) \cite{goan2020bnn}. In a probabilistic approach, they place a distribution over the network parameters. They can, hence, express their uncertainty in case they see challenging inputs. This could be very useful in a security-critical environment and would, for instance, allow an autonomous vehicle to alert its driver if it is unable to deal with a particular situation. However, it does not strictly correspond to the challenge description where security guarantees for unseen inputs should be made. A BNN would require a concrete input $\mathbf{x}_i$ to express its certainty.
+
+Therefore, we to decided pursue the goal of (b), meaning that we made our model robust against local perturbations. Simply put, this means that the model should reliably label unseen samples that lie near known training samples with the same class as the known sample. We put forward a more formal definition in Section \ref{sec:approach}. It is trivial to give such guarantees for simple models: For logistic regression and k-nearest-neighbours, the decision boundary can be used to derive them. For naive Bayes classifiers, confidence intervals can be directly computed. Some of these classifiers would also produce relatively well on the given datasets, which is why we use them as baselines for our final model (see Subsection \ref{ssec:baselines}). However, they would not scale well to higher dimensions and more complex problems. 
+
+More complicated models include SVM and Gaussian Processes (GP) for classification. SVM can be powerful, especially with RBF kernels, but cannot provide the guarantees we require. GP would provide us with empirical confidence intervals but becomes inefficient in higher dimensions. Furthermore, both approaches are not leading in state-of-the-art predictive capabilities for challenging tasks, especially in the vision domain.
+
+Another powerful class of machine learning models are decision trees and random forests. They display high predictive capabilities and can also be verified, but as \cite{tornblom2018formal} found, verification time does not scale very well to larger models.
+
+Finally, we arrive at deep neural networks, which have received much attention in recent machine learning history. They scale well to very complex problems but used to be considered textbook examples for black-box models. However, recently, there has been a lot of work focused on explainability and defence against adversarial samples. It started with approaches that provided exact upper and lower bounds for neural network outputs given certain input perturbations. Reluplex \cite{katz2017reluplex} is an example that, however, only works for networks with ReLU activations. Further research introduced methods that work with arbitrary activations and use linear relaxations that compute tight approximations to significantly improve performance, allowing these techniques to be scaled to larger networks. Such work includes IBP \cite{gowal2019effectivenessIBP}, CROWN \cite{zhang2018efficient} and DeepPoly \cite{singh2019abstractDeepPoly}. We decided to use AutoLiRPA \cite{xu2020autoLiRPA} that introduces a framework that applies these techniques to general neural networks and allows for automatic analysis on computational graphs.
+
+\subsection{Baselines} \label{ssec:baselines}
+
+% TODO add our baselines
+
+
 
 \section{Approach} \label{sec:approach}
 %TODO
@@ -121,10 +141,16 @@ Thus, while we employ the same general approach for all three data sets, we tune
 %• All assumptions made, including an exhaustive proposal/justification for their validation
 ~\cite{xu2020automatic}
 
-\section{Results}
+
+Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible (infinitely many) samples that lie within this ball $\{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support $L_2$ and $L_\infty$-norm.
+
+\section{Experiments}
 %TODO
 % For each data set, an upper bound for the misclassification error, including its justification
 
+\subsection{Metrics}
+
+\subsection{Results}
 We used Weights \& Biases \cite{wandb} for experiment tracking and visualisations.
 
 
