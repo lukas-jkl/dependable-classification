@@ -169,9 +169,13 @@ Under the assumption that any new unseen data point lies within the defined neig
 \subsection{Metrics}
 In our experiments we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety related cost associated with misclassification.
 
+
+\subsubsection{Precision, Recall, F1}
+Precision, Recall and F1 are commonly used to compare the performance of classification models. And help to capture the trade-off between true-positive and false-positive predictions. 
+
+
 \subsubsection{Classification Cost}
-%TODO: fix
-We can model the safety criticality of decisions from our classifier based on a cost matrix as illustrated in Table~\ref{tab:cost_matrix}. In our particular example assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_1$ should greatly exceed the cost $c_0$ of assigning the label $1$ (red) to true label $0$. In our evaluation we capture this in the metric \textit{classification cost} which is the sum over all misclassifications and their associated cost. 
+We can model the safety criticality of decisions from our classifier based on a cost matrix as illustrated in Table~\ref{tab:cost_matrix}. In our particular example assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_{1,0}$ should greatly exceed the cost $c_{1,1}$ of assigning the label $1$ (red) to true label $0$. In our evaluation we capture this in the metric \textit{classification cost} which is the sum over all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
 
 \begin{table}[H]
   \begin{tabular}{|l|c|c|c|}\hline
@@ -183,21 +187,25 @@ We can model the safety criticality of decisions from our classifier based on a 
   \label{tab:cost_matrix}
 \end{table}
 
-\subsection{Verified Accuracy}
 
 
-\subsection{Precision, Recall, F1}
+\subsubsection{Verified Accuracy}
+The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model.
+
+\subsection{Architecture Search}
+Due to the simplicity of the data sets we only use simple multilayer perceptron (MLP) architectures. We experiment with between one and three hidden layers and different number of neurons as well as regularization techniques such as weight decay and dropout regularization. To perform the architecture search we use the metric classification cost per sample, this metric helps us find a suitable model with respect to our security metrics. We utilize Weights \& Biases \cite{wandb} for tracking our experiments and for visualizing the results. 
+
+\subsubsection{Generalization}
+A big problem for neural networks is overfitting. That is the network will end up fitting the training data very well, but will fail to generalize to new unseen data. To prevent this we use 20\% of the given data as validation data set. During training we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 
 \subsection{Results}
 
-\subsubsection{data set a}
+\subsubsection{Data Set a}
 
-\subsubsection{data set b}
+\subsubsection{Data Set b}
 
-\subsubsection{data set c}
-
-We used Weights \& Biases \cite{wandb} for experiment tracking and visualisations.
+\subsubsection{Data Set c}
 
 
 \section{Discussion}
