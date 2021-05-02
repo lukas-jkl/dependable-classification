@@ -193,11 +193,11 @@ This will cause the training samples of the underrepresented class to be weighte
 
 Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified, i.e.
 \begin{align}
-	\text{acc}_\text{verified} :&= p(f(\mathbf{y}_i) = l_i | \exists \mathbf{x}_j : \mathbf{y}_i \in B_{\epsilon} (\mathbf{x}_j) \land l_j = l_i ) \\
-	&= \frac{\text{\# verified samples}}{\text{\# total samples}}.
+	\text{acc}_\text{verified}(\epsilon) :&= p(f(\mathbf{y}_i) = l_i | \exists \mathbf{x}_j : \mathbf{y}_i \in B_{\epsilon} (\mathbf{x}_j) \land l_j = l_i ) \\
+	&= \frac{\text{\# verified and correctly classified samples}}{\text{\# total samples}}.
 \end{align} % TODO maybe add where x_j comes from? Need a symbol for training set.
 
-We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}.
+We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} (\epsilon) = \text{acc}$.
 
 % TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
 
@@ -212,24 +212,22 @@ The challenging aspect of this verification is to show for all data points $\mat
 % TODO write some generic stuff about our experiments. Exact model architecture?
 
 \subsection{Metrics}
-In our experiments, we use a variety of different metrics, which allow us to compare the results given the imbalance of class labels in the data set as well as the safety-related cost associated with misclassification.
+In our experiments, we use various metrics, which allow us to compare the results given the imbalanced data sets, the verification capability, and the safety-related cost associated with misclassification.
 
 \begin{itemize}
-	\item \textbf{Precision, Recall, F1}: For imbalanced models, precision, recall, F1 score are commonly used to compare the performance of classification models. They help capturing the trade-off between true-positive and false-positive predictions. 
+	\item \textbf{Precision, Recall, F1}: For classification tasks on imbalanced data sets, precision, recall and F1 score are commonly used to compare model performance. They help to capture the trade-off between true-positive and false-positive predictions better than accuracy.
 	%TODO: write how F1 is defined
-	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and their associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
-	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us to evaluate the dependability of our model. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} = \text{acc}$.
+	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and weighted with the associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
+	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us evaluate the dependability of our model.
 \end{itemize}
 
 In the end, we optimise our model for minimal classification cost. Depending on the $\epsilon$ chosen by the user, we achieve varying \textit{verified accuracies}.
 
 \subsection{Architecture Search}
-Due to the simplicity of the data sets, we only use simple multilayer perceptron (MLP) architectures. We experiment with between 1 and 4 hidden layers and different numbers of neurons as well as regularisation techniques such as weight decay and dropout regularisation. We train the model using Adam with a batch size of 32 and varying learning rates. To perform the architecture search, we use the metric classification cost per sample. This metric helps us find a suitable model with respect to our security metrics. We utilise Weights \& Biases \cite{wandb} for tracking our experiments and for visualising the results. 
+Due to the simplicity of the data sets, we only use simple multilayer perceptron (MLP) architectures. We experiment with between 1 and 4 hidden layers and different numbers of neurons as well as regularisation techniques such as weight decay and dropout regularisation. We train the model using Adam with a batch size of 32 and varying learning rates. To perform the architecture search, we use the metric \textit{classification cost per sample}. This metric helps us find a suitable model with respect to our security metrics. We utilise Weights \& Biases \cite{wandb} for tracking our experiments and for visualising the results. 
 
 
-\subsubsection*{Generalization}
-A big problem for neural networks is overfitting. That is the network will end up fitting the training data very well, but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training we monitor the validation loss and use early stopping to prevent the network from overfitting. 
-
+A big problem for neural networks is overfitting, meaning that the network will end up fitting the training data very well but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training, we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 \subsection{Results}
 
@@ -279,15 +277,13 @@ For data set C we used two hidden layers with 256 neurons and a learning rate of
 
 
 \section{Discussion}
-In this work, we have proposed a solution for estimating the dependability of neural networks and give safety guarantees for local robustness in a classification setting.
+In this work, we have proposed a solution for estimating the dependability of neural networks and giving safety guarantees for local robustness in a classification setting.
 
-While we only applied our approach to simple two-dimensional input data, it can easily be \textbf{scaled to higher dimensions} by using more complex models. This is also possible because bounds can be computed rather quickly as compared to the exact methods for finding bounds described in Section \ref{sec:relatedWork}. Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the library we used, AutoLiRPA~\cite{xu2020autoLiRPA}, can also be used for more complex architectures such as convolutional networks, recurrent neural networks, or transformers and thereby verify results for state-of-the-art models for challenging problems in, for example, computer vision.
+While we only applied our approach to simple two-dimensional input data, it can easily be \textbf{scaled to higher dimensions} by using more complex models. This is also possible because bounds can be computed rather quickly as compared to the exact methods described in Section \ref{sec:relatedWork}. Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the library we used, AutoLiRPA~\cite{xu2020autoLiRPA}, can also be used for more complex architectures such as convolutional networks, recurrent neural networks, or transformers and thereby verify results for state-of-the-art models for challenging problems in, for example, computer vision.
 
-The main limitations of our approach lie in the necessary assumptions. Mainly the requirement of correctly labelled input data as well as the assumption of new samples lying within the $\epsilon$-neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}, need to be considered. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple datasets, other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
+The main limitations of our approach lie in the necessary assumptions, i.e. the requirement of correctly labelled input data and the premise that new samples are located within the $\epsilon$-neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple data sets other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
 
-We, hence, believe that our model strikes a good balance in this spectrum of demanding requirements.  % TODO write nicer
-
-% TODO Lukas: Wichtigster Punkt ist, dass der Lösungspunkt sich prinzipiell in eine Sicherheitsnachweislösung auch einbetten lässt.
+We, hence, believe that our model strikes a good balance in this environment of demanding requirements and can be incorporated well into safety verification solutions. % TODO Lukas: Wichtigster Punkt ist, dass der Lösungspunkt sich prinzipiell in eine Sicherheitsnachweislösung auch einbetten lässt. / na, wie ist das? :D
 
 \pagebreak  
 
