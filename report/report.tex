@@ -252,7 +252,26 @@ We perform experiments where we change the defined costs to be in line with the 
   \end{figure}
 
 \subsubsection*{Data Set A}
-%TODO: @Patrick insert results
+For data set A, we use four hidden layers, each with 200 neurons and a learning rate of 0.002. We also use weight decay with $\lambda=0.0001$ to prevent overfitting. In our experience, it was the most challenging data set. The results are listed in Table~\ref{tab:results_a}. We exceed the baseline accuracy for cost $c_{1, 1} = 1$ and still achieve good performance with cost $c_{1, 1} = 10$. Only for $c_{1, 1} = 50$ the performance starts to degrade as the network gets more careful, and there is a safety-accuracy trade-off. 
+
+\begin{table}[H]
+\resizebox{\textwidth}{!}{
+  \begin{tabular}{cccllcllccc}
+  \textbf{} & \multicolumn{1}{l}{} & \multicolumn{9}{l}{} \\ \cline{2-11} 
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1,1} = 1$} & \multicolumn{3}{c|}{$c_{1,1} = 10$} & \multicolumn{3}{c|}{$c_{1,1} = 50$} \\ \cline{2-11} 
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{$\epsilon$}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} \\ \hline
+  \multicolumn{1}{|c|}{\textbf{Full}} & \multicolumn{1}{c|}{\textbf{Verified Acc.}} & \multicolumn{1}{l|}{0.9680} & \multicolumn{1}{l|}{0.9090} & \multicolumn{1}{l|}{0.7250} & \multicolumn{1}{l|}{0.9080} & \multicolumn{1}{l|}{0.8540} & \multicolumn{1}{l|}{0.7210} & \multicolumn{1}{c|}{0.69500} & \multicolumn{1}{c|}{0.6540} & \multicolumn{1}{c|}{0.5850} \\ \hline
+  \multicolumn{1}{|c|}{\multirow{3}{*}{\textbf{Train}}} & \multicolumn{1}{c|}{\textbf{Accuracy}} & \multicolumn{3}{c|}{0.9750} & \multicolumn{3}{c|}{0.9200} & \multicolumn{3}{c|}{0.6975} \\ \cline{2-11} 
+  \multicolumn{1}{|c|}{} & \multicolumn{1}{c|}{\textbf{F1}} & \multicolumn{3}{c|}{0.9748} & \multicolumn{3}{c|}{0.8881} & \multicolumn{3}{c|}{0.7536} \\ \cline{2-11} 
+  \multicolumn{1}{|c|}{} & \multicolumn{1}{l|}{\textbf{Cost/Sample}} & \multicolumn{3}{c|}{0.0250} & \multicolumn{3}{c|}{0.0800} & \multicolumn{3}{c|}{0.3025} \\ \hline
+  \multicolumn{1}{|l|}{\multirow{3}{*}{\textbf{Validation}}} & \multicolumn{1}{c|}{\textbf{Accuracy}} & \multicolumn{3}{c|}{0.9450} & \multicolumn{3}{c|}{0.8800} & \multicolumn{3}{c|}{0.7050} \\ \cline{2-11} 
+  \multicolumn{1}{|l|}{} & \multicolumn{1}{c|}{\textbf{F1}} & \multicolumn{3}{c|}{0.9384} & \multicolumn{3}{c|}{0.8427} & \multicolumn{3}{c|}{0.7158} \\ \cline{2-11} 
+  \multicolumn{1}{|l|}{} & \multicolumn{1}{l|}{\textbf{Cost/Sample}} & \multicolumn{3}{c|}{0.0550} & \multicolumn{3}{c|}{0.3000} & \multicolumn{3}{c|}{0.5400} \\ \hline
+  \end{tabular}}
+  \caption{Results for data set A}
+  \label{tab:results_a}
+  \end{table}
+
 
 \subsubsection*{Data Set B}
 For data set B we use two hidden layers, each with 64 neurons and a learning rate of 0.0003. The results are listed in Table~\ref{tab:results_b}. In our experiments, dataset B was the least challenging one, and we achieve excellent scores across all metrics with Accuracy scores of around 99\%. 
