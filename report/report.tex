@@ -79,7 +79,7 @@
 
 \section{Introduction}
 
-This is a submission to the \textit{Siemens AI Dependability Assessment}\footnote{\url{https://ecosystem.siemens.com/ai-da-sc}}. The challenge task was to solve a 2D binary classification problem, i.e. a binary function $f(\mathbf{x})$ classifies a data point $\mathbf{x_i} = (x_i^1, x_i^2)$ as either $l_i=0$ (green) or $l_i=1$ (red). With only two dimensions, the data sets are rather simple, yet the approach should also scale to inputs of higher dimensions. Most importantly, however, $f(\mathbf{x})$ should provide safety guarantees. This means that the ML model must not only have high predictive capabilities but also be capable of producing provably reliable results under certain assumptions. Furthermore, the setting is chosen such that misclassification costs are not equal for the two classes. Following the analogy of traffic lights, it is more dangerous (costly) to classify a red sample as green than classifying a green sample as red. It is given that the training data is labelled correctly and that the classes do not overlap.  
+This is a submission to the \textit{Siemens AI Dependability Assessment}\footnote{\url{https://ecosystem.siemens.com/ai-da-sc}}. The challenge task was to solve a 2D binary classification problem, i.e. a binary function $f(\mathbf{x_i})$ classifies a data point $\mathbf{x_i} = (x_i^1, x_i^2)$ as either $l_i=0$ (green) or $l_i=1$ (red). With only two dimensions, the data sets are rather simple, yet the approach should also scale to inputs of higher dimensions. Most importantly, however, $f(\mathbf{x}_i)$ should provide safety guarantees. This means that the ML model must not only have high predictive capabilities but also must be able to produce provably reliable results under certain assumptions. Furthermore, the setting is chosen such that misclassification costs are not equal for the two classes. Following the analogy of traffic lights, it is more dangerous (costly) to classify a red sample as green than classifying a green sample as red. It is given that the training data is labelled correctly and that the classes do not overlap.  
 
 Our solution aims at striking the ideal balance of these criteria in that it displays high predictive performance, gives provable safety guarantees, scales well to more complex data sets, and lets domain experts dynamically configure the class-wise cost of misclassification.
 
@@ -92,7 +92,7 @@ Fig. \ref{fig:datasets} shows the three data sets of the challenge. Before we st
 \begin{enumerate}
 	\item \textbf{Size}: The data sets vary in size, with A being the smallest and C the biggest.
 	\item \textbf{Class balance}: While data set B is relatively balanced, A and C show significant imbalance with a ratio of roughly 2:1 and 10:1, respectively, where class 0 (green) is the overrepresented one.
-	\item \textbf{Separability}: It is easy to see that data set B can be separated by drawing a simple sine-like wave across the two dimensions and data set B by using multiple ellipses. For data set A, however, it is harder to make out a clear trend. There are several cases where green and red samples are very close to each other, and accurately separating classes will prove difficult.
+	\item \textbf{Separability}: It is easy to see that data set B can be separated by drawing a simple sine-like wave across the two dimensions and data set C by using multiple ellipses. For data set A, however, it is harder to make out a clear trend. There are several cases where green and red samples are very close to each other, and accurately separating classes will prove difficult.
 \end{enumerate}
 
 Thus, while we employ the same general approach for all three data sets, we tune our hyper-parameters separately to obtain ideal performance.
@@ -131,7 +131,7 @@ It is trivial to give such guarantees for simple models: For logistic regression
 
 More complicated models include support vector machines (SVM) and Gaussian Processes (GP) for classification. SVM can be powerful, especially with RBF kernels, but cannot provide the guarantees we require. GP would provide us with empirical confidence intervals but becomes inefficient in higher dimensions. Furthermore, both approaches are not leading in state-of-the-art predictive capabilities for challenging tasks, especially in the vision domain.
 
-Another powerful class of machine learning models are decision trees and random forests. They display high predictive capabilities and can also be verified, but as \cite{tornblom2018formal} found, verification time does not scale very well to larger models.
+Another powerful class of machine learning models are decision trees and random forests. They display high predictive capabilities and can also be verified, but as \cite{tornblom2018formal} found, verification time does not scale very well to larger models. However, there might very well exist verification techniques for tree-based models that could suit this challenge but that we are unaware of at this time.
 
 Finally, we arrive at deep neural networks, which have received much attention in recent machine learning history. They scale well to very complex problems but used to be considered textbook examples for black-box models. However, recently, there has been a lot of work focused on explainability and defence against adversarial samples. It started with approaches that provided exact upper and lower bounds for neural network outputs given certain input perturbations. Reluplex \cite{katz2017reluplex} is an example that, however, only works for networks with ReLU activations. Further research introduced methods that work with arbitrary activations and use linear relaxations that compute tight approximations to significantly improve performance, allowing these techniques to be scaled to larger networks. Such work includes IBP \cite{gowal2019effectivenessIBP}, CROWN \cite{zhang2018efficient} and DeepPoly \cite{singh2019abstractDeepPoly}. We decided to use AutoLiRPA \cite{xu2020autoLiRPA}, a framework that applies these techniques to general neural networks and allows for automatic analysis on computational graphs.
 
@@ -160,7 +160,7 @@ To warrant the use of a complex deep neural network, we made sure that it exceed
 %• All assumptions made, including an exhaustive proposal/justification for their validation
 
 
-We model the safety criticality of our classifier's decisions using a cost matrix illustrated in Table~\ref{tab:cost_matrix}. Correctly classifying a sample obviously does not incur any cost, i.e. $c_{0,0} = c_{1,1} = 0$. In our particular example, assigning the label $0$ (green) to a data point with true label $1$ (red) is safety critical and therefore the associated cost $c_{1,0}$ should greatly exceed the cost $c_{0,1}$ of assigning the label $1$ (red) to true label $0$. Concrete values for $c_{0,1}$ and $c_{1,0}$ can be set by the users of our approach. The algorithm then minimises the total cost.
+We model the safety criticality of our classifier's decisions using a cost matrix illustrated in Table~\ref{tab:cost_matrix}. Correctly classifying a sample obviously does not incur any cost, i.e. $c_{0,0} = c_{1,1} = 0$. In our particular example, assigning label $0$ (green) to a data point with true label $1$ (red) is safety-critical and therefore the associated cost $c_{1,0}$ should greatly exceed the cost $c_{0,1}$ of assigning label $1$ (red) to true label $0$. Concrete values for $c_{0,1}$ and $c_{1,0}$ can be set by the users of our approach. The algorithm then minimises the total cost. If $c_{0,1} = c_{1,0}$, this is equivalent to maximising accuracy.
 
 \begin{table}
   \begin{tabular}{|l|c|c|c|}\hline
@@ -174,16 +174,16 @@ We model the safety criticality of our classifier's decisions using a cost matri
 
 \subsection{Model} \label{ssec:model}
 
-The model we use is a deep neural network implemented in PyTorch. It receives as input a 2D training sample, processes it through several hidden layers with ReLU activations and finally outputs a single scalar, activated through the sigmoid function $\sigma(a_i)$. If the output is smaller than 0.5, class 0 is assigned, class 1 otherwise. We use double weighted binary cross-entropy as our loss function:
+The model we use is a deep neural network implemented in PyTorch. It receives as input a 2D training sample, processes it through several hidden layers with ReLU activations and finally outputs a single scalar, activated through the sigmoid function $\sigma(a_i)$. If the output is smaller than 0.5, class 0 is assigned, class 1 otherwise. We use double weighted binary cross-entropy as our loss function, where we define the loss for one sample $i$ as
 \begin{equation}
-	l_i = -w_{i}[py_{i} \log \sigma(a_i) + (1-y_i)\log(1-\sigma(a_i))]
+	l_i = -w_{i}[py_{i} \log \sigma(a_i) + (1-y_i)\log(1-\sigma(a_i))].
 \end{equation} 
 
-where $l_i$ is the loss for sample $i$, $a_i$ is the output of the neural network before activated in sigmoid and $y_i$ is the correct label. To counter class imbalance, we set
+$a_i$ is the output of the neural network before activated in sigmoid and $y_i$ is the correct label. To counter class imbalance, we set
 \begin{equation}
 w_i = \begin{cases}
-\frac{\text{\# class 0 samples}}{\text{\# class 1 samples}} & y_i = 1\\
-1 & y_i = 0.
+\frac{\text{\# class 0 samples}}{\text{\# class 1 samples}} & \text{if } y_i = 1,\\
+1 & \text{otherwise}.
 \end{cases}
 \end{equation}
 
@@ -191,7 +191,12 @@ This will cause the training samples of the underrepresented class to be weighte
 
 \subsection{Verification} \label{ssec:verification}
 
-Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified. % TODO maybe explain a bit more (conditional probability?) - elaborate with p(...)
+Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified, i.e.
+\begin{align}
+	\text{acc}_\text{verified} :&= p(f(\mathbf{y}_i) = l_i | \exists \mathbf{x}_j : \mathbf{y}_i \in B_{\epsilon} (\mathbf{x}_j) \land l_j = l_i ) \\
+	&= \frac{\text{\# verified samples}}{\text{\# total samples}}.
+\end{align} % TODO maybe add where x_j comes from? Need a symbol for training set.
+
 We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}.
 
 % TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
