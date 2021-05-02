@@ -203,14 +203,14 @@ We call this metric \textit{verified accuracy}, inspired by the \textit{verified
 
 The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. To do so, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
 
-% TODO should we explain how autoLiRPA works a bit more?
+% TODO should we explain how autoLiRPA works a bit more? DONE?
 AutoLiRPA considers a set of inputs (which we define as $\epsilon$ region) and gives the worst-case lower and upper bounds for a neural network. It achieves this by simplifying the neural network to a linear function by using upper and lower bounds to replace non-linear units within the network. Using this, it can propagate the bounds throughout the network and, in the end, provide the bounds for the entire network.
 
 \section{Experiments}
 %TODO
 % For each data set, an upper bound for the misclassification error, including its justification
 
-% TODO write some generic stuff about our experiments. Exact model architecture?
+% TODO write some generic stuff about our experiments. Exact model architecture? DONE?
 
 \subsection{Metrics}
 In our experiments, we use various metrics, which allow us to compare the results given the imbalanced data sets, the verification capability, and the safety-related cost associated with misclassification.
@@ -218,7 +218,7 @@ In our experiments, we use various metrics, which allow us to compare the result
 \begin{itemize}
 	\item \textbf{Precision, Recall, F1}: For classification tasks on imbalanced data sets, precision, recall, and F1 score are commonly used to compare model performance. They help to capture the trade-off between true-positive and false-positive predictions better than accuracy. We use the f1 score during training to monitor our model's performance and compare final models. More specifically, we compute the macro average over the f1 score of both classes. This means both classes are valued equally even though they might have a different number of labels. Therefore, the score would also be low if the model only performs well on the class, representing the majority of the labels, which is not the case for standard accuracy.
 	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and weighted with the associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
-	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us evaluate the dependability of our model.
+	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us evaluate the dependability of our model and provides a lower bound for the achieved accuracy of our model. 
 \end{itemize}
 
 In the end, we optimise our model for minimal classification cost. Depending on the $\epsilon$ chosen by the user, we achieve varying \textit{verified accuracies}.
@@ -230,7 +230,8 @@ Due to the simplicity of the data sets, we only use simple multilayer perceptron
 A big problem for neural networks is overfitting, meaning that the network will end up fitting the training data very well but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training, we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 \subsection{Results}
-In this section, we list our achieved results on the datasets under our previously defined performance metrics. We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) consistent we alternate between the cost values 1, 10 and 50 for $c_{1, 1}$ (security-critical). For each dataset, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 1} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 1} = 10$ we only observe a single such misclassification and for $c_{1, 1} = 50$ the model does not make a single such prediction. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
+In this section, we list our achieved results on the datasets under our previously defined performance metrics. Amongst our metrics, the cost per sample gives a good indication of the performance with respect to the misclassification cost, while the verified accuracy provides a lower bound for the achieved accuracy under the respective $\epsilon$ assumption. 
+We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) consistent we alternate between the cost values 1, 10 and 50 for $c_{1, 1}$ (security-critical). For each dataset, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 1} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 1} = 10$ we only observe a single such misclassification and for $c_{1, 1} = 50$ the model does not make a single such prediction. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
 
 %TODO: mark security critical misclassifications?
 \begin{figure}[H]
@@ -275,7 +276,7 @@ For data set B we use two hidden layers, each with 64 neurons and a learning rat
   \end{table}
 
 \subsubsection*{Data Set C}
-For data set C, we used two hidden layers with 256 neurons and a learning rate of 0.001. We list the results in Table~\ref{tab:results_c}. The biggest challenge with this dataset was the high imbalance in the number of labels between the classes. However, as we adapted our loss function accordingly, we were able to achieve rather good results around 98\% accuracy for $c_{1, 1} = 1$. As the cost increases, the problem does get more challenging and the accuracy does suffer a bit. 
+For data set C, we used two hidden layers with 256 neurons and a learning rate of 0.001. We list the results in Table~\ref{tab:results_c}. The biggest challenge with this dataset was the high imbalance in the number of labels between the classes. However, as we adapted our loss function accordingly, we achieved rather good results around 98\% accuracy for $c_{1, 1} = 1$. As the cost increases, we can see a safety-accuracy trade-off where the system gets very cautious, and the accuracy does suffer a bit.
 
 \begin{table}[H]
   \resizebox{\textwidth}{!}{
@@ -303,7 +304,9 @@ While we only applied our approach to simple two-dimensional input data, it can 
 
 The main limitations of our approach lie in the necessary assumptions, i.e. the requirement of correctly labelled input data and the premise that new samples are located within the $\epsilon$-neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple data sets other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
 
-We, hence, believe that our model strikes a good balance in this environment of demanding requirements and can be incorporated well into safety verification solutions. % TODO Lukas: Wichtigster Punkt ist, dass der Lösungspunkt sich prinzipiell in eine Sicherheitsnachweislösung auch einbetten lässt. / na, wie ist das? :D
+The definition of an $\epsilon$-neighbourhood can be used to estimate the dependability of our system and can be adapted in accordance to the data in a given domain. This, in conjunction with the cost matrix, which allows the system to be scaled in accordance to a safety-accuracy trad-off, allows our system to be adapted to a variety of safety-critical applications. 
+We, hence, believe that our model strikes a good balance in this environment of demanding requirements and can be incorporated well into safety verification solutions. % TODO: Wichtigster Punkt ist, dass der Lösungspunkt sich prinzipiell in eine Sicherheitsnachweislösung auch einbetten lässt. / na, wie ist das? 🤷‍♀️ DONE?
+
 
 \pagebreak  
 
