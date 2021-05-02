@@ -1,23 +1,28 @@
 import unittest
 import torch
 import wandb
-import pandas as pd
 import numpy as np
 from tqdm import tqdm
 
-import data_prep, evaluation
+import data_prep
+import evaluation
+
 
 class TestBounds(unittest.TestCase):
+    """ Test to verify that the verrified regions do not interfere with each other
+
+    """
     def test_bounds(self):
         wandb.init(mode='disabled', config='config.yaml')
         config = wandb.config
-        
+
         assert config.cache_model_name is not None, "Cached model must exist to run this test"
         model = torch.load(config.cache_model_name).to("cpu")
 
         dataset, _ = data_prep.prepare_data(config.dataset, 0)
         data_loader = torch.utils.data.DataLoader(dataset, batch_size=config.batch_size)
-        results = evaluation.compute_accs(model, data_loader, config.pert_norm, config.pert_eps, torch.device("cpu"))
+        results = evaluation.evaluate_model_predictions(model, data_loader, config.pert_norm, config.pert_eps,
+                                                        torch.device("cpu"))
 
         for i, (data, _) in enumerate(tqdm(dataset)):
             verified_label = results["verified_predicted_classes"][i]

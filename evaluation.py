@@ -1,19 +1,29 @@
+from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import wandb
 from tqdm import tqdm
+import torch.nn as nn
+from torch.utils.data import DataLoader
 import torch
 from auto_LiRPA import BoundedModule, BoundedTensor, PerturbationLpNorm
 from sklearn.metrics import precision_recall_fscore_support
 
-def compute_accs(model, data_loader, pert_norm, pert_eps, device):
-    """ Compute prediction/accuracy as well as verified-predictions/verified-accuracy
-    
+
+def evaluate_model_predictions(model: nn.Module, data_loader: DataLoader, pert_norm, pert_eps: float,
+                               device: torch.device) -> Dict:
+    """ Compute predictions/accuracy as well as verified-predictions/verified-accuracy
+         and costs associated with the predictions
+
     model: base model
     data_loader: where to load data from
-    pert_norm: perturbation norm to use 
+    pert_norm: perturbation norm to use
     pert_eps: epsilon to use for perturbation norm
+    device: the torch device on which to compute
+
+    Returns:
+        Dict: computed measures and predictions
     """
 
     ptb = PerturbationLpNorm(norm=pert_norm, eps=pert_eps)
@@ -62,7 +72,16 @@ def compute_accs(model, data_loader, pert_norm, pert_eps, device):
     }
 
 
-def precision_recall_f1_table(y_true, y_pred, labels=[0, 1]) -> pd.DataFrame:
+def precision_recall_f1_table(y_true: torch.Tensor, y_pred: torch.Tensor, labels=[0, 1]) -> pd.DataFrame:
+    """ Compute precision recall and f1 values
+
+    y_true: the true predictions
+    y_pred: the predictions of the model
+    labels: the labels for which to compute the metrics. Default [0, 1]
+    Returns:
+        DataFrame with the results
+    """
+
     table_frame = pd.DataFrame(columns=["label", "precision", "recall", "f1", "support"])  # force column order
     precisions, recalls, fbetas, supports = precision_recall_fscore_support(y_true, y_pred, labels=labels)
     for label, prec, recall, fbeta, support in zip(labels, precisions, recalls, fbetas, supports):
@@ -72,8 +91,18 @@ def precision_recall_f1_table(y_true, y_pred, labels=[0, 1]) -> pd.DataFrame:
     return table_frame
 
 
+def plot_results(verified_predictions: torch.Tensor, predictions: torch.Tensor, data_loader: DataLoader, pert_norm,
+                 epsilon: float, log_name: str):
+    """ Creates a plot of the given predictions
 
-def plot_results(verified_predictions, predictions, data_loader, pert_norm, epsilon, log_name):
+    verified_predictions: The predictions that are also verified (plotted with eps neighborhood)
+    predictions: The predictions of the model
+    data_loader: Data points to plot
+    pert_norm: Which norm was used (2, np.inf)
+    epsilon: The size of the eps region
+    log_name: The name under which the plot is logged
+    """
+
     data, targets = data_loader.dataset.dataset[data_loader.dataset.indices]
 
     correct = (predictions.squeeze() == targets)
@@ -85,18 +114,20 @@ def plot_results(verified_predictions, predictions, data_loader, pert_norm, epsi
     fig, ax = plt.subplots(figsize=(12, 12))
     plt.scatter(data[label_0 & correct][:, 0], data[label_0 & correct][:, 1], c="green", label="0", s=10, zorder=10)
     plt.scatter(data[label_1 & correct][:, 0], data[label_1 & correct][:, 1], c="red", label="1", s=10, zorder=10)
-    plt.scatter(data[label_0 & np.invert(correct).bool()][:, 0], data[label_0 & np.invert(correct).bool()][:, 1], c="darkred",
-                label="0 (true: 1)", s=20, marker='x', zorder=15)
-    plt.scatter(data[label_1 & np.invert(correct).bool()][:, 0], data[label_1 & np.invert(correct).bool()][:, 1], c="limegreen",
-                label="1 (true: 0)", s=20, marker='x', zorder=15)
+    plt.scatter(data[label_0 & np.invert(correct).bool()][:, 0], data[label_0 & np.invert(correct).bool()][:, 1],
+                c="darkred", label="0 (true: 1)", s=20, marker='x', zorder=15)
+    plt.scatter(data[label_1 & np.invert(correct).bool()][:, 0], data[label_1 & np.invert(correct).bool()][:, 1],
+                c="limegreen", label="1 (true: 0)", s=20, marker='x', zorder=15)
 
     for idx, c in zip([verified_label_0, verified_label_1], ["green", "red"]):
         points = data[idx]
         for i in range(len(points)):
             if pert_norm == 2:
-                patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
+                patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.1,
+                                   zorder=0)
             elif pert_norm == np.inf:
-                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon, width=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
+                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon,
+                                      width=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
             else:
                 raise RuntimeError(f"{pert_norm}-norm not supported for plotting")
             ax.add_patch(patch)

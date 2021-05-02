@@ -4,7 +4,16 @@ from torch.utils.data import Dataset
 
 from typing import Tuple
 
+
 def prepare_data(dataset_name: str, val_split: float) -> Tuple[Dataset, Dataset]:
+    """ Prepare data for training, split into datasets
+
+    dataset_name: which dataset to load (a, b, c)
+    val_split: the fraction of data used as validation data
+
+    Returns:
+        (Training set, Validation set)
+    """
     data_path = f"./data/trainingdata_{dataset_name}.xls"
     data = pd.read_excel(data_path)
 
