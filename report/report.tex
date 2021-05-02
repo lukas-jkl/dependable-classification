@@ -229,11 +229,31 @@ Due to the simplicity of the data sets, we only use simple multilayer perceptron
 A big problem for neural networks is overfitting, meaning that the network will end up fitting the training data very well but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training, we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 \subsection{Results}
+In this section, we list our achieved results on the datasets under our previously defined performance metrics. We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) consistent we alternate between the cost values 1, 10 and 50 for $c_{1, 1}$ (security-critical). For each dataset, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 1} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 1} = 10$ we only observe a single such misclassification and for $c_{1, 1} = 50$ the model does not make a single such prediction. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
+
+%TODO: mark security critical misclassifications?
+\begin{figure}[H]
+  \begin{subfigure}[b]{0.32\textwidth}
+      \includegraphics[width=\textwidth]{assets/b-val-cost1-eps0_01}
+      \caption{$c_{1, 1} = 1$}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.32\textwidth}
+      \includegraphics[width=\textwidth]{assets/b-val-cost10-eps0_01}
+      \caption{$c_{1, 1} = 10$}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.32\textwidth}
+      \includegraphics[width=\textwidth]{assets/b-val-cost50-eps0_01}
+      \caption{$c_{1, 1} = 50$}
+    \end{subfigure}
+    \caption{Predictions for dataset B on the validation set for $\epsilon = 0.01$}
+    \label{fig:b_val_results}
+  \end{figure}
 
 \subsubsection*{Data Set A}
+%TODO: @Patrick insert results
 
 \subsubsection*{Data Set B}
-For data set B we use two hidden layers each with 64 neurons and a learning rate of 0.0003. 
+For data set B we use two hidden layers, each with 64 neurons and a learning rate of 0.0003. The results are listed in Table~\ref{tab:results_b}. In our experiments, dataset B was the least challenging one, and we achieve excellent scores across all metrics with Accuracy scores of around 99\%. 
 
 \begin{table}[H]
   \resizebox{\textwidth}{!}{
@@ -254,7 +274,7 @@ For data set B we use two hidden layers each with 64 neurons and a learning rate
   \end{table}
 
 \subsubsection*{Data Set C}
-For data set C we used two hidden layers with 256 neurons and a learning rate of 0.001.
+For data set C, we used two hidden layers with 256 neurons and a learning rate of 0.001. We list the results in Table~\ref{tab:results_c}. The biggest challenge with this dataset was the high imbalance in the number of labels between the classes. However, as we adapted our loss function accordingly, we were able to achieve rather good results around 98\% accuracy for $c_{1, 1} = 1$. As the cost increases, the problem does get more challenging and the accuracy does suffer a bit. 
 
 \begin{table}[H]
   \resizebox{\textwidth}{!}{
