@@ -9,6 +9,7 @@ Here you can find the code for our submission to the *Siemens AI Dependability A
 
 ## Submitted files:
 
+- `config.yaml`: the wandb config file for setting the training parameters
 - `requirements.txt`: all used packages required to run our code
 - `train.py`: the main script to train the model
 - `nn_model.py` functions to create the model
