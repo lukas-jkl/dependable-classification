@@ -4,16 +4,18 @@ Here you can find the code for our submission to the *Siemens AI Dependability A
 
 ## Authors:
 
-- Patrick Deutschmann
-- Lukas Timpl
+- Patrick Deutschmann, patrick.deutschmann@student.tugraz.at
+- Lukas Timpl, lukas.timpl@student.tugraz.at
 
 ## Submitted files:
 
-- `config.yaml`: the wandb config file for setting the training parameters
+- `config.yaml`: the [Weights & Biases](https://wandb.ai/site) config file for setting the training parameters
 - `requirements.txt`: all used packages required to run our code
 - `train.py`: the main script to train the model
 - `nn_model.py` functions to create the model
 - `evaluation.py`: evaluation functions
-- `data_prep.py`: functions to prepare the datasets
-- `bounds_test.py`: contains a sanity-check test case
+- `data_prep.py`: functions to prepare the data sets
+- `bounds_test.py`: a sanity-check test case
+- `baselines.ipynb`: notebook with the baseline computations
+- `data_prep.ipynb`: notebook investigating the data sets
 
