@@ -10,6 +10,7 @@
 \usepackage{caption}
 \usepackage{multirow}
 \usepackage{slashbox}
+\usepackage{hyperref}
 
 
 %%
@@ -40,13 +41,6 @@
 
 \author{Lukas Timpl}
 \email{lukas.timpl@student.tugraz.at}
-
-% TODO check whether we fulfil all these criteria:
-% - Is the description of the approach complete and comprehensive?
-% - Are there justifications or proposals for validation of the assumptions?
-% - Is there a justification for the upper bound of the misclassification error?
-% - Is the upper bound appropriate for safety applications?
-% - Is there an outline how the approach would scale to higher dimensions?
 
 %%
 %% The abstract is a short summary of the work to be presented in the
@@ -83,7 +77,7 @@ The challenge task of the \textit{Siemens AI Dependability Assessment}\footnote{
 
 Our solution aims at striking the ideal balance of these criteria in that it displays high predictive performance, gives provable safety guarantees, scales well to more complex data sets, and lets domain experts dynamically configure the class-wise cost of misclassification.
 
-The architecture we chose is a deep neural network trained with cost-weighted binary cross-entropy loss. The safety guarantees follow the assumption of reliable training inputs. Using Linear Relaxation Based Perturbation Analysis (LiRPA), we can guarantee stable predictions in the $\epsilon$-neighbourhood of previously seen samples.
+The architecture we chose is a deep neural network trained with cost-weighted binary cross-entropy loss. The safety guarantees follow the assumption of reliable training inputs. Using Linear Relaxation Based Perturbation Analysis (LiRPA), we can guarantee stable predictions in the $\epsilon$-neighbourhood of previously seen samples. \footnote{All code is provided as a ZIP file attached to this report.}
 
 \subsection{Data sets}
 
@@ -194,71 +188,73 @@ This will cause the training samples of the underrepresented class to be weighte
 Relying on the assumption that our training samples are correctly labelled, we want to guarantee for a certain number of samples, which we call \textit{verified}, that all inputs surrounding them are assigned the same class as the centre. Formally, we define a neighbourhood around training sample $\mathbf{x}_i$ as an $L_p$-ball with radius $\epsilon$. We then guarantee for all possible inputs that lie within this ball $B_\epsilon(\mathbf{x}_i) = \{\mathbf{y} \in \mathbb{R}: ||\mathbf{x}_i - \mathbf{y}||_p < \epsilon \}$ that they are assigned $l_i$. In our implementation, we support both the $L_2$ and the $L_\infty$-norm. Under the assumption that an unseen data point lies within the defined neighbourhood of a known training sample, we can give a probability that this new data point will be correctly classified based on the percentage of training samples that are verified, i.e.
 \begin{align}
 	\text{acc}_\text{verified}(\epsilon) :&= p(f(\mathbf{y}_i) = l_i | \exists \mathbf{x}_j : \mathbf{y}_i \in B_{\epsilon} (\mathbf{x}_j) \land l_j = l_i ) \\
-	&= \frac{\text{\# verified and correctly classified samples}}{\text{\# total samples}}.
-\end{align} % TODO maybe add where x_j comes from? Need a symbol for training set.
+	&= \frac{\text{\# verified and correctly classified samples}}{\text{\# samples}}
+\end{align}
+where $\mathbf{x}_j$ is a sample of the training data set.
 
 We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} (\epsilon) = \text{acc}$.
 
 % TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
 
-The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. To do so, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
+The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. It computes for a set of inputs (which we provide as a training sample and its $\epsilon$-neighbourhood) the worst-case lower and upper bounds for the output of a neural network. It achieves this by simplifying the network to a linear function and using upper and lower bounds to replace non-linear units. Using this, it can propagate the bounds through the model and, in the end, provide the bounds for the entire network.
 
-% TODO should we explain how autoLiRPA works a bit more? DONE?
-AutoLiRPA considers a set of inputs (which we define as $\epsilon$ region) and gives the worst-case lower and upper bounds for a neural network. It achieves this by simplifying the neural network to a linear function by using upper and lower bounds to replace non-linear units within the network. Using this, it can propagate the bounds throughout the network and, in the end, provide the bounds for the entire network.
+For our verification, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
 
 \section{Experiments}
 %TODO
 % For each data set, an upper bound for the misclassification error, including its justification
 
-% TODO write some generic stuff about our experiments. Exact model architecture? DONE?
+After fixing the approach, we conducted numerous experiments to find the ideal network architecture that performs best for the individual data sets.
 
 \subsection{Metrics}
-In our experiments, we use various metrics, which allow us to compare the results given the imbalanced data sets, the verification capability, and the safety-related cost associated with misclassification.
+We use various metrics, which allow us to compare the results given the imbalanced data sets, the verification capability, and the safety-related cost associated with misclassification.
 
 \begin{itemize}
-	\item \textbf{Precision, Recall, F1}: For classification tasks on imbalanced data sets, precision, recall, and F1 score are commonly used to compare model performance. They help to capture the trade-off between true-positive and false-positive predictions better than accuracy. We use the f1 score during training to monitor our model's performance and compare final models. More specifically, we compute the macro average over the f1 score of both classes. This means both classes are valued equally even though they might have a different number of labels. Therefore, the score would also be low if the model only performs well on the class, representing the majority of the labels, which is not the case for standard accuracy.
-	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and weighted with the associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on datasets with a different number of samples. 
+	\item \textbf{Precision, Recall, F1}: For classification tasks on imbalanced data sets, precision, recall, and F1 score are commonly used to compare model performance. They help to capture the trade-off between true-positive and false-positive predictions better than accuracy. We use the F1 score during training to monitor our model's performance and compare final models. Additionally to the individual class scores, we compute the macro average over the F1 score of both classes. This means both labels are valued equally even though they might have a different number of samples. Therefore, the score would be low if the model only performed well on the class representing the majority of the data points, which is not the case for standard accuracy. For brevity reasons, we only report the combined score.
+	\item \textbf{Classification cost}: Our evaluation also captures the varying misclassification costs of the two classes as \textit{total classification cost}. It is defined as the sum of all misclassifications and weighted with the associated cost. Furthermore, we introduce the metric \textit{classification cost per sample} which allows us to compare the metric on data sets with a different number of samples. 
 	\item \textbf{Verified Accuracy}: The verified accuracy which we introduced in Section~\ref{sec:approach} can quantify the probability of classifying an unseen data point correctly. This metric helps us evaluate the dependability of our model and provides a lower bound for the achieved accuracy of our model. 
+	\item \textbf{Misclassification Error}: Under the above assumptions, the misclassification error is simply $1 - \text{acc}_\text{verified}$.
 \end{itemize}
 
 In the end, we optimise our model for minimal classification cost. Depending on the $\epsilon$ chosen by the user, we achieve varying \textit{verified accuracies}.
 
 \subsection{Architecture Search}
-Due to the simplicity of the data sets, we only use simple multilayer perceptron (MLP) architectures. We experiment with between 1 and 4 hidden layers and different numbers of neurons as well as regularisation techniques such as weight decay and dropout regularisation. We train the model using Adam with a batch size of 32 and varying learning rates. To perform the architecture search, we use the metric \textit{classification cost per sample}. This metric helps us find a suitable model with respect to our security metrics. We utilise Weights \& Biases \cite{wandb} for tracking our experiments and for visualising the results. 
+Due to the simplicity of the data sets, we only use simple multilayer perceptron (MLP) architectures. We experiment with between 1 and 4 hidden layers and different numbers of neurons as well as regularisation techniques such as weight decay and dropout regularisation. We train the model using Adam with a batch size of 32 and varying learning rates. To perform the architecture search, we use the metric \textit{classification cost per sample}. This metric helps us find a suitable model with respect to our security metrics. We utilise Weights \& Biases \cite{wandb} for tracking our experiments and for visualising the results.\footnote{A report of our model's results can be found \href{https://wandb.ai/implication-elimination/dependable-classification/reports/Siemens-AI-Dependability-Assessment-Results--Vmlldzo2NTQ4Mjc?accessToken=r8qsleb47wg3u5sn41lh88rtdm81ryukk6t45jch44sjpc715mdxkd1nz7zd4htv}{\underline{here}}. }
 
 
 A big problem for neural networks is overfitting, meaning that the network will end up fitting the training data very well but will fail to generalise to new unseen data. To prevent this, we use 20\% of the given data as validation data set. During training, we monitor the validation loss and use early stopping to prevent the network from overfitting. 
 
 \subsection{Results}
-In this section, we list our achieved results on the datasets under our previously defined performance metrics. Amongst our metrics, the cost per sample gives a good indication of the performance with respect to the misclassification cost, while the verified accuracy provides a lower bound for the achieved accuracy under the respective $\epsilon$ assumption. 
-We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) consistent we alternate between the cost values 1, 10 and 50 for $c_{1, 1}$ (security-critical). For each dataset, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 1} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 1} = 10$ we only observe a single such misclassification and for $c_{1, 1} = 50$ the model does not make a single such prediction. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
+In this section, we list our achieved results on the data sets under our previously defined performance metrics. Amongst our metrics, the cost per sample gives a good indication of the performance with respect to the misclassification cost, while the verified accuracy provides a lower bound for the achieved accuracy under the respective $\epsilon$-assumption. The corresponding misclassification error can be computed as one minus the verified accuracy.
+
+We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) constant to 1, we alternate between cost values 1, 10 and 50 for $c_{1, 0}$ (security-critical). For each data set, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 0} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 0} = 10$ we only observe one such misclassification and for $c_{1, 0} = 50$ the model does not make any. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
 
 %TODO: mark security critical misclassifications?
 \begin{figure}[H]
   \begin{subfigure}[b]{0.32\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost1-eps0_01}
-      \caption{$c_{1, 1} = 1$}
+      \caption{$c_{1, 0} = 1$}
     \end{subfigure}
   \begin{subfigure}[b]{0.32\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost10-eps0_01}
-      \caption{$c_{1, 1} = 10$}
+      \caption{$c_{1, 0} = 10$}
     \end{subfigure}
     \begin{subfigure}[b]{0.32\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost50-eps0_01}
-      \caption{$c_{1, 1} = 50$}
+      \caption{$c_{1, 0} = 50$}
     \end{subfigure}
-    \caption{Predictions for dataset B on the validation set for $\epsilon = 0.01$}
+    \caption{Predictions for data set B on the validation set for $\epsilon = 0.01$}
     \label{fig:b_val_results}
   \end{figure}
 
-\subsubsection*{Data Set A}
-For data set A, we use four hidden layers, each with 200 neurons and a learning rate of 0.002. We also use weight decay with $\lambda=0.0001$ to prevent overfitting. In our experience, it was the most challenging data set. The results are listed in Table~\ref{tab:results_a}. We exceed the baseline accuracy for cost $c_{1, 1} = 1$ and still achieve good performance with cost $c_{1, 1} = 10$. Only for $c_{1, 1} = 50$ the performance starts to degrade as the network gets more careful, and there is a safety-accuracy trade-off. 
+\subsubsection*{Data set A}
+For data set A, we use four hidden layers, each with 200 neurons and a learning rate of 0.002. We also use weight decay with $\lambda=0.0001$ to prevent overfitting. In our experience, it was the most challenging data set. The results are listed in Table~\ref{tab:results_a}. We exceed the baseline accuracy for cost $c_{1, 0} = 1$ and still achieve good performance with cost $c_{1, 0} = 10$. Only for $c_{1, 0} = 50$ the performance starts to degrade as the network gets more careful, and there is a safety-accuracy trade-off. 
 
 \begin{table}[H]
 \resizebox{\textwidth}{!}{
   \begin{tabular}{cccllcllccc}
   \textbf{} & \multicolumn{1}{l}{} & \multicolumn{9}{l}{} \\ \cline{2-11} 
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1,1} = 1$} & \multicolumn{3}{c|}{$c_{1,1} = 10$} & \multicolumn{3}{c|}{$c_{1,1} = 50$} \\ \cline{2-11} 
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1,0} = 1$} & \multicolumn{3}{c|}{$c_{1,0} = 10$} & \multicolumn{3}{c|}{$c_{1,0} = 50$} \\ \cline{2-11} 
   \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{$\epsilon$}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} \\ \hline
   \multicolumn{1}{|c|}{\textbf{Full}} & \multicolumn{1}{c|}{\textbf{Verified Acc.}} & \multicolumn{1}{l|}{0.9680} & \multicolumn{1}{l|}{0.9090} & \multicolumn{1}{l|}{0.7250} & \multicolumn{1}{l|}{0.9080} & \multicolumn{1}{l|}{0.8540} & \multicolumn{1}{l|}{0.7210} & \multicolumn{1}{c|}{0.69500} & \multicolumn{1}{c|}{0.6540} & \multicolumn{1}{c|}{0.5850} \\ \hline
   \multicolumn{1}{|c|}{\multirow{3}{*}{\textbf{Train}}} & \multicolumn{1}{c|}{\textbf{Accuracy}} & \multicolumn{3}{c|}{0.9750} & \multicolumn{3}{c|}{0.9200} & \multicolumn{3}{c|}{0.6975} \\ \cline{2-11} 
@@ -273,14 +269,14 @@ For data set A, we use four hidden layers, each with 200 neurons and a learning 
   \end{table}
 
 
-\subsubsection*{Data Set B}
-For data set B we use two hidden layers, each with 64 neurons and a learning rate of 0.0003. The results are listed in Table~\ref{tab:results_b}. In our experiments, dataset B was the least challenging one, and we achieve excellent scores across all metrics with Accuracy scores of around 99\%. 
+\subsubsection*{Data set B}
+For data set B, we use two hidden layers, each with 64 neurons and a learning rate of 0.0003. The results are listed in Table~\ref{tab:results_b}. In our experiments, data set B was the least challenging one, and we achieve excellent scores across all metrics with accuracy scores of around 99\%. 
 
 \begin{table}[H]
   \resizebox{\textwidth}{!}{
   \begin{tabular}{cccllcllccc}
   \textbf{} & \multicolumn{1}{l}{} & \multicolumn{9}{l}{} \\ \cline{2-11} 
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1, 1}=1$} & \multicolumn{3}{c|}{$c_{1, 1}=10$} & \multicolumn{3}{c|}{$c_{1, 1}=50$} \\ \cline{2-11} 
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1, 0}=1$} & \multicolumn{3}{c|}{$c_{1, 0}=10$} & \multicolumn{3}{c|}{$c_{1, 0}=50$} \\ \cline{2-11} 
   \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{$\epsilon$}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} \\ \hline
   \multicolumn{1}{|c|}{\textbf{Full}} & \multicolumn{1}{c|}{\textbf{Verified Acc.}} & \multicolumn{1}{l|}{0.9864} & \multicolumn{1}{l|}{0.8804} & \multicolumn{1}{l|}{0.6836} & \multicolumn{1}{l|}{0.9854} & \multicolumn{1}{l|}{0.8880} & \multicolumn{1}{l|}{0.7052} & \multicolumn{1}{c|}{0.9760} & \multicolumn{1}{c|}{0.8802} & \multicolumn{1}{c|}{0.6514} \\ \hline
   \multicolumn{1}{|c|}{\multirow{3}{*}{\textbf{Train}}} & \multicolumn{1}{c|}{\textbf{Acc.}} & \multicolumn{3}{c|}{0.9915} & \multicolumn{3}{c|}{0.9918} & \multicolumn{3}{c|}{0.9810} \\ \cline{2-11} 
@@ -294,14 +290,14 @@ For data set B we use two hidden layers, each with 64 neurons and a learning rat
   \label{tab:results_b}
   \end{table}
 
-\subsubsection*{Data Set C}
-For data set C, we used two hidden layers with 256 neurons and a learning rate of 0.001. We list the results in Table~\ref{tab:results_c}. The biggest challenge with this dataset was the high imbalance in the number of labels between the classes. However, as we adapted our loss function accordingly, we achieved rather good results around 98\% accuracy for $c_{1, 1} = 1$. As the cost increases, we can see a safety-accuracy trade-off where the system gets very cautious, and the accuracy does suffer a bit.
+\subsubsection*{Data set C}
+For data set C, we used two hidden layers with 256 neurons and a learning rate of 0.001. We list the results in Table~\ref{tab:results_c}. The biggest challenge with this data set was the high imbalance in the number of labels between the classes. However, as we adapted our loss function accordingly, we achieved rather good results around 98\% accuracy for $c_{1, 0} = 1$. As the cost increases, we can see a safety-accuracy trade-off where the system gets very cautious, and the accuracy does suffer a bit.
 
 \begin{table}[H]
   \resizebox{\textwidth}{!}{
   \begin{tabular}{cccllcllccc}
   \textbf{} & \multicolumn{1}{l}{} & \multicolumn{9}{l}{} \\ \cline{2-11} 
-  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1, 1}=1$} & \multicolumn{3}{c|}{$c_{1, 1}=10$} & \multicolumn{3}{c|}{$c_{1, 1}=50$} \\ \cline{2-11} 
+  \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{Cost}} & \multicolumn{3}{c|}{$c_{1, 0}=1$} & \multicolumn{3}{c|}{$c_{1, 0}=10$} & \multicolumn{3}{c|}{$c_{1, 0}=50$} \\ \cline{2-11} 
   \multicolumn{1}{c|}{} & \multicolumn{1}{c|}{\textbf{$\epsilon$}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} & \multicolumn{1}{c|}{\textbf{0.001}} & \multicolumn{1}{c|}{\textbf{0.01}} & \multicolumn{1}{c|}{\textbf{0.025}} \\ \hline
   \multicolumn{1}{|c|}{\textbf{Full}} & \multicolumn{1}{c|}{\textbf{Verified Acc.}} & \multicolumn{1}{l|}{0.9749} & \multicolumn{1}{l|}{0.8854} & \multicolumn{1}{l|}{0.6563} & \multicolumn{1}{l|}{0.9408} & \multicolumn{1}{l|}{0.8636} & \multicolumn{1}{l|}{0.6316} & \multicolumn{1}{c|}{0.8769} & \multicolumn{1}{c|}{0.8055} & \multicolumn{1}{c|}{0.5660} \\ \hline
   \multicolumn{1}{|c|}{\multirow{3}{*}{\textbf{Train}}} & \multicolumn{1}{c|}{\textbf{Acc.}} & \multicolumn{3}{c|}{0.9806} & \multicolumn{3}{c|}{0.9467} & \multicolumn{3}{c|}{0.8837} \\ \cline{2-11} 
@@ -321,11 +317,9 @@ In this work, we have proposed a solution for estimating the dependability of ne
 
 While we only applied our approach to simple two-dimensional input data, it can easily be \textbf{scaled to higher dimensions} by using more complex models. This is also possible because bounds can be computed rather quickly as compared to the exact methods described in Section \ref{sec:relatedWork}. Due to the high predictive capabilities of neural networks in various domains, the proposed solution can be applied to a multitude of different problems. Furthermore, the library we used, AutoLiRPA~\cite{xu2020autoLiRPA}, can also be used for more complex architectures such as convolutional networks, recurrent neural networks, or transformers and thereby verify results for state-of-the-art models for challenging problems in, for example, computer vision.
 
-The main limitations of our approach lie in the necessary assumptions, i.e. the requirement of correctly labelled input data and the premise that new samples are located within the $\epsilon$-neighbourhood of existing training samples, as discussed in Section~\ref{sec:approach}. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple data sets other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
+The main limitations of our approach lie in the necessary assumptions, i.e. the requirement of correctly labelled input data and the premise that new samples are located within the $\epsilon$-neighbour-hood of existing training samples, as discussed in Section~\ref{sec:approach}. We cannot give guarantees for inputs, the like of which our model has never seen before. That, however, lies in the nature of data-driven prediction models. While for these simple data sets other approaches might be less resource-intensive, they do not possess the predictive capabilities of neural networks and do not perform as well on other, more complex domains.
 
-The definition of an $\epsilon$-neighbourhood can be used to estimate the dependability of our system and can be adapted in accordance to the data in a given domain. This, in conjunction with the cost matrix, which allows the system to be scaled in accordance to a safety-accuracy trad-off, allows our system to be adapted to a variety of safety-critical applications. 
-We, hence, believe that our model strikes a good balance in this environment of demanding requirements and can be incorporated well into safety verification solutions. % TODO: Wichtigster Punkt ist, dass der Lösungspunkt sich prinzipiell in eine Sicherheitsnachweislösung auch einbetten lässt. / na, wie ist das? 🤷‍♀️ DONE?
-
+The definition of an $\epsilon$-neighbourhood can be used to estimate the dependability of our system and can be adapted to the requirements of a given application. In conjunction with the cost matrix, which allows us to configure the desired safety-accuracy trade-off, this renders our system adaptable to a variety of safety-critical applications. We, hence, believe that our model strikes a good balance in this environment of demanding requirements and can be incorporated well into safety verification solutions. 
 
 \pagebreak  
 
