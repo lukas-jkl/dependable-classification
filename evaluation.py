@@ -126,8 +126,8 @@ def plot_results(verified_predictions: torch.Tensor, predictions: torch.Tensor, 
                 patch = plt.Circle((points[:, 0][i], points[:, 1][i]), radius=epsilon, color=c, fill=True, alpha=0.1,
                                    zorder=0)
             elif pert_norm == np.inf:
-                patch = plt.Rectangle((points[:, 0][i] - epsilon/2, points[:, 1][i] - epsilon/2), height=epsilon,
-                                      width=epsilon, color=c, fill=True, alpha=0.1, zorder=0)
+                patch = plt.Rectangle((points[:, 0][i] - epsilon, points[:, 1][i] - epsilon), height=epsilon * 2,
+                                      width=epsilon * 2, color=c, fill=True, alpha=0.1, zorder=0)
             else:
                 raise RuntimeError(f"{pert_norm}-norm not supported for plotting")
             ax.add_patch(patch)
