@@ -192,17 +192,26 @@ Relying on the assumption that our training samples are correctly labelled, we w
 \end{align}
 where $\mathbf{x}_j$ is a sample of the training data set.
 
-We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} (\epsilon) = \text{acc}$.
+We call this metric \textit{verified accuracy}, inspired by the \textit{verified accuracy under IBP verification} as proposed in \cite{huang2019achieving}. The smaller the $\epsilon$-neighbourhood becomes, the closer the verified accuracy approaches the accuracy, i.e. $\lim_{\epsilon \to 0} \text{acc}_{\text{verified}} (\epsilon) = \text{acc}$. The concept is illustrated in Figure \ref{fig:verified_example}.
 
-% TODO show what this looks like with a nice plot from data set A. Maybe two next to each other, one with L_2 and one with L_inf.
+\begin{figure}
+  \begin{subfigure}[b]{0.48\textwidth}
+      \includegraphics[width=\textwidth]{assets/a_l2}
+      \caption{$L_2$ norm}
+    \end{subfigure}
+  \begin{subfigure}[b]{0.48\textwidth}
+      \includegraphics[width=\textwidth]{assets/a_linf}
+      \caption{$L_\infty$ norm}
+  \end{subfigure}
+  \caption{Illustration of verified samples for $\epsilon = 0.025$. The boxes or circles (for $L_\infty$ norm or $L_2$ norm respectively) denote the area of which we can guarantee that all samples within will be assigned the same class as the training sample in the middle, i.e. all inputs in red boxes/circles will be classified as 1, all inputs in green boxes/circles as 0.}
+  \label{fig:verified_example}
+\end{figure}
 
 The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. It computes for a set of inputs (which we provide as a training sample and its $\epsilon$-neighbourhood) the worst-case lower and upper bounds for the output of a neural network. It achieves this by simplifying the network to a linear function and using upper and lower bounds to replace non-linear units. Using this, it can propagate the bounds through the model and, in the end, provide the bounds for the entire network.
 
 For our verification, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
 
 \section{Experiments}
-%TODO
-% For each data set, an upper bound for the misclassification error, including its justification
 
 After fixing the approach, we conducted numerous experiments to find the ideal network architecture that performs best for the individual data sets.
 
@@ -227,19 +236,18 @@ A big problem for neural networks is overfitting, meaning that the network will 
 \subsection{Results}
 In this section, we list our achieved results on the data sets under our previously defined performance metrics. Amongst our metrics, the cost per sample gives a good indication of the performance with respect to the misclassification cost, while the verified accuracy provides a lower bound for the achieved accuracy under the respective $\epsilon$-assumption. The corresponding misclassification error can be computed as one minus the verified accuracy.
 
-We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) constant to 1, we alternate between cost values 1, 10 and 50 for $c_{1, 0}$ (security-critical). For each data set, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 0} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 0} = 10$ we only observe one such misclassification and for $c_{1, 0} = 50$ the model does not make any. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
+We perform experiments where we change the defined costs to be in line with the security aspect of the challenge. Namely, while keeping the cost $c_{0, 1}$ (not security-critical) constant to 1, we alternate between cost values 1, 10 and 50 for $c_{1, 0}$ (security-critical). For each data set, we are able to match or exceed the established baselines for a cost of 1:1. In Figure~\ref{fig:b_val_results} we illustrate the performance of the trained model on data set B for varying costs. While for $c_{1, 0} = 1$ there are a number of security-critical misclassifications (marked as red crosses), for $c_{1, 0} = 10$ we only observe two such misclassification and for $c_{1, 0} = 50$ the model does not make any. Furthermore, these results are achieved on the validation set, indicating the generalised capability of the model to respect the defined safety cost. 
 
-%TODO: mark security critical misclassifications?
 \begin{figure}[H]
-  \begin{subfigure}[b]{0.32\textwidth}
+  \begin{subfigure}[b]{0.42\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost1-eps0_01}
       \caption{$c_{1, 0} = 1$}
     \end{subfigure}
-  \begin{subfigure}[b]{0.32\textwidth}
+  \begin{subfigure}[b]{0.42\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost10-eps0_01}
       \caption{$c_{1, 0} = 10$}
     \end{subfigure}
-    \begin{subfigure}[b]{0.32\textwidth}
+    \begin{subfigure}[b]{0.42\textwidth}
       \includegraphics[width=\textwidth]{assets/b-val-cost50-eps0_01}
       \caption{$c_{1, 0} = 50$}
     \end{subfigure}
