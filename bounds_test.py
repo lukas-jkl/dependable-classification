@@ -9,7 +9,7 @@ import evaluation
 
 
 class TestBounds(unittest.TestCase):
-    """ Test to verify that the verrified regions do not interfere with each other
+    """ Sanity check to check that the verrified regions do not interfere with each other
 
     """
     def test_bounds(self):
@@ -32,8 +32,8 @@ class TestBounds(unittest.TestCase):
 
                     if compare_verified_label != -1 and verified_label != compare_verified_label:
                         if config.pert_norm == np.inf:
-                            ge = torch.all(compare_data >= data - config.pert_eps)
-                            le = torch.all(compare_data <= data + config.pert_eps)
+                            ge = torch.all(compare_data >= data - config.pert_eps * 2)
+                            le = torch.all(compare_data <= data + config.pert_eps * 2)
                             self.assertFalse(ge and le)
                         elif config.pert_norm == 2:
                             self.assertFalse(torch.sum((data - compare_data) ** 2) < config.pert_eps ** 2)
