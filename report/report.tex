@@ -204,6 +204,7 @@ We call this metric \textit{verified accuracy}, inspired by the \textit{verified
 The challenging aspect of this verification is to show for all data points $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ that they indeed are labelled with the same class as $\mathbf{x}_i$. As there exist infinitely many such inputs, it is impossible to let the model classify them all and check empirically. We, therefore, use the AutoLiRPA framework \cite{xu2020autoLiRPA} to compute bounds for the outputs of our network. To do so, we compute upper ($a_{\text{upper}}$) and lower ($a_{\text{lower}}$) bounds for every sample in our training data set, compute the respective sigmoid activations and check whether both the upper and the lower bound would result in the same prediction. If they do, we can guarantee that all inputs $\mathbf{y} \in B_\epsilon(\mathbf{x}_i)$ are classified as $l_i$. Otherwise, we cannot make that statement, and somewhere in the $\epsilon$-neighbourhood of $\mathbf{x_i}$ there exist inputs that our model would classify as $1-l_i$.
 
 % TODO should we explain how autoLiRPA works a bit more?
+AutoLiRPA considers a set of inputs (which we define as $\epsilon$ region) and gives the worst-case lower and upper bounds for a neural network. It achieves this by simplifying the neural network to a linear function by using upper and lower bounds to replace non-linear units within the network. Using this, it can propagate the bounds throughout the network and, in the end, provide the bounds for the entire network.
 
 \section{Experiments}
 %TODO
