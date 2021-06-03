@@ -8,6 +8,7 @@ report.pdf
 venv/*
 sweep_configs/*
 auto_LiRPA/*
+artifacts/*
 
 ### LaTeX ###
 .texpadtmp

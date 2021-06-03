@@ -26,6 +26,9 @@ def evaluate_model_predictions(model: nn.Module, data_loader: DataLoader, pert_n
         Dict: computed measures and predictions
     """
 
+    if len(data_loader) == 0:
+        return {}
+
     ptb = PerturbationLpNorm(norm=pert_norm, eps=pert_eps)
 
     acc = 0

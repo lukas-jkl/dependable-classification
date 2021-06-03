@@ -27,7 +27,7 @@ cost_0_classified_as_1:
   value: 1
 cost_1_classified_as_0:
   desc: cost of classifying true sample 1 (red) as label 0 (green)
-  value: 50
+  value: 1
 pert_norm:
   desc: which p-norm to use for the input perturbation (plots only supported for 2 and inf)
   # value: .inf
@@ -37,10 +37,10 @@ pert_eps:
   value: 0.025
 cache_model_name:
   desc: name of cached model (null to disable caching)
-  value: null
+  value: artifacts/model_a_cost_1/model.torch
 val_split:
   desc: fraction of the training data used as validation set
-  value: 0.2
+  value: 0
 patience:
   desc: number of epochs used for early stopping (0 to disable early stopping)
   value: 200
@@ -50,3 +50,6 @@ weight_decay:
 dropout:
   desc: probability of a neuron input being zeroed during training for regularisation
   value: 0 # 0.25
+dataset_type_train:
+  desc: whether to use train or validation data
+  value: False

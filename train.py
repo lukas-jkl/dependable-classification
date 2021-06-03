@@ -169,33 +169,39 @@ def evaluate(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
 
     config = wandb.config
     model.to(device)
+    results = {}
 
     # Train results
-    results_train = evaluation.evaluate_model_predictions(model, train_loader, config.pert_norm, config.pert_eps, device)
+    results_train = evaluation.evaluate_model_predictions(model, train_loader, config.pert_norm, config.pert_eps,
+                                                          device)
     evaluation.plot_results(results_train["verified_predicted_classes"], results_train["predicted_classes"],
                             train_loader, config.pert_norm, config.pert_eps, "train_results")
     train_samples = train_loader.dataset.dataset[train_loader.dataset.indices][1]
     train_table = evaluation.precision_recall_f1_table(train_samples, results_train["predicted_classes"])
+    results.update({"train_" + k: v for k, v in results_train.items()})
+    results.update({
+        "train_prec_recall_f1": wandb.Table(dataframe=train_table),
+    })
 
     # Validation results
     results_val = evaluation.evaluate_model_predictions(model, val_loader, config.pert_norm, config.pert_eps, device)
-    evaluation.plot_results(results_val["verified_predicted_classes"], results_val["predicted_classes"],
-                            val_loader, config.pert_norm, config.pert_eps, "val_results")
-    val_samples = val_loader.dataset.dataset[val_loader.dataset.indices][1]
-    val_table = evaluation.precision_recall_f1_table(val_samples, results_val["predicted_classes"])
+    if len(results_val) != 0:
+        evaluation.plot_results(results_val["verified_predicted_classes"], results_val["predicted_classes"],
+                                val_loader, config.pert_norm, config.pert_eps, "val_results")
+        val_samples = val_loader.dataset.dataset[val_loader.dataset.indices][1]
+        val_table = evaluation.precision_recall_f1_table(val_samples, results_val["predicted_classes"])
+        results.update({"val_" + k: v for k, v in results_val.items()})
+        results.update({
+            "val_prec_recall_f1": wandb.Table(dataframe=val_table),
+        })
 
+    # Full results
     full_dataset = ConcatDataset([train_loader.dataset, val_loader.dataset])
     full_loader = DataLoader(full_dataset, batch_size=config.batch_size)
     results_full = evaluation.evaluate_model_predictions(model, full_loader, config.pert_norm, config.pert_eps, device)
-
-    results = {}
-    results.update({"train_" + k: v for k, v in results_train.items()})
-    results.update({"val_" + k: v for k, v in results_val.items()})
+    data_prep.save_predictions(config.dataset, results_full["predicted_classes"], config.dataset_type_train)
     results.update({"full_" + k: v for k, v in results_full.items()})
-    results.update({
-        "train_prec_recall_f1": wandb.Table(dataframe=train_table),
-        "val_prec_recall_f1": wandb.Table(dataframe=val_table),
-    })
+
     wandb.log(results)
 
 
@@ -204,7 +210,7 @@ def main():
     config = wandb.config
     config.model = 'NN'
 
-    train_dataset, val_dataset = data_prep.prepare_data(config.dataset, config.val_split)
+    train_dataset, val_dataset = data_prep.prepare_data(config.dataset, config.val_split, config.dataset_type_train)
     train_loader = DataLoader(train_dataset, batch_size=config.batch_size)
     val_loader = DataLoader(val_dataset, batch_size=config.batch_size)
 
