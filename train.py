@@ -151,7 +151,7 @@ def train_model(model: nn.Module, device: torch.device, train_loader: DataLoader
             "val_f1": val_f1
         })
 
-    model_path = "model.torch"
+    model_path = wandb.config.cache_model_name
     torch.save(model.to("cpu"), model_path)
     artifact = wandb.Artifact('model', type='model')
     artifact.add_file(model_path)
@@ -196,7 +196,10 @@ def evaluate(model: nn.Module, train_loader: DataLoader, val_loader: DataLoader,
         })
 
     # Full results
-    full_dataset = ConcatDataset([train_loader.dataset, val_loader.dataset])
+    if val_loader.dataset is not None:
+        full_dataset = ConcatDataset([train_loader.dataset, val_loader.dataset])
+    else:
+        full_dataset = train_loader.dataset
     full_loader = DataLoader(full_dataset, batch_size=config.batch_size)
     results_full = evaluation.evaluate_model_predictions(model, full_loader, config.pert_norm, config.pert_eps, device)
     data_prep.save_predictions(config.dataset, results_full["predicted_classes"], config.dataset_type_train)

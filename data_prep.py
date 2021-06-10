@@ -34,7 +34,11 @@ def prepare_data(dataset_name: str, val_split: float, train: bool = True) -> Tup
     train_size = round(X.shape[0] * (1 - val_split))
     val_size = X.shape[0] - train_size
 
-    return torch.utils.data.random_split(dataset, (train_size, val_size), generator=torch.Generator().manual_seed(42))
+    if train:
+        return torch.utils.data.random_split(dataset, (train_size, val_size),
+                                             generator=torch.Generator().manual_seed(42))
+    else:
+        return torch.utils.data.Subset(dataset, list(range(len(dataset)))), None
 
 
 def save_predictions(dataset_name: str, predictions: torch.Tensor, train: bool = True):
